@@ -1,0 +1,15 @@
+# Usuario docente de prueba
+dn: uid=mdocente,ou=usuarios,dc=itu,dc=edu,dc=ar
+objectClass: inetOrgPerson
+uid: mdocente
+cn: Maria Docente
+sn: Docente
+userPassword: clave1234
+
+# Usuario alumno de prueba
+dn: uid=aalumno,ou=usuarios,dc=itu,dc=edu,dc=ar
+objectClass: inetOrgPerson
+uid: aalumno
+cn: Ana Alumno
+sn: Alumno
+userPassword: clave1234
