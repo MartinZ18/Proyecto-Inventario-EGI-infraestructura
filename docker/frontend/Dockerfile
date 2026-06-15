@@ -21,9 +21,14 @@ FROM nginx:1.25-alpine
 # Configuración propia: SPA estática + proxy opcional hacia la API.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia todo el contenido estático del frontend (index.html, css/, js/, img/, *.html).
-# El .dockerignore evita copiar Dockerfile/nginx.conf/.git al sitio servido.
+# Copia todo el contenido estático del frontend (index.html, css/, js/, img/, *.html),
+# junto con nginx.conf/Dockerfile/.dockerignore/README.md (también presentes en el
+# build context); estos últimos se eliminan a continuación para no servirlos.
 COPY . /usr/share/nginx/html
+RUN rm -f /usr/share/nginx/html/Dockerfile \
+          /usr/share/nginx/html/nginx.conf \
+          /usr/share/nginx/html/.dockerignore \
+          /usr/share/nginx/html/README.md
 
 EXPOSE 80
 

@@ -1,7 +1,8 @@
-# Archivos que no deben terminar dentro de la imagen del frontend.
-Dockerfile
-nginx.conf
-.dockerignore
+# .dockerignore aplica a TODO el build context (no a un COPY puntual), así
+# que Dockerfile/nginx.conf/.dockerignore/README.md NO van acá: el propio
+# Dockerfile los copia y los borra después con `RUN rm -f` (necesita que
+# nginx.conf esté presente en el contexto para el COPY a
+# /etc/nginx/conf.d/default.conf). Acá solo lo que nunca debe entrar al
+# contexto.
 .git
 .vscode
-README.md
