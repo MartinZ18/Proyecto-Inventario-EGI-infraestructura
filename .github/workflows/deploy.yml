@@ -34,10 +34,9 @@
 #   - SQLSERVER_PASSWORD    -> backend-secret.SQLSERVER_PASSWORD
 #   - MONGO_ROOT_USER       -> backend-secret.MONGO_USER
 #   - MONGO_ROOT_PASSWORD   -> backend-secret.MONGO_PASSWORD
-#
-# (LDAP_BIND_PASSWORD se documenta en active-directory/README.md para
-# cuando el backend incorpore un bind de servicio "svc-inventario";
-# todavía no es consumido por backend-secret).
+#   - LDAP_BIND_PASSWORD    -> backend-secret.LDAP_BIND_PASSWORD (password
+#                              de la cuenta de servicio svc-inventario@itu.local,
+#                              ver active-directory/README.md sección 4)
 # ============================================================
 
 name: Deploy Inventario ITU a Minikube
@@ -135,6 +134,7 @@ jobs:
             --from-literal=SQLSERVER_PASSWORD="${{ secrets.SQLSERVER_PASSWORD }}" \
             --from-literal=MONGO_USER="${{ secrets.MONGO_ROOT_USER }}" \
             --from-literal=MONGO_PASSWORD="${{ secrets.MONGO_ROOT_PASSWORD }}" \
+            --from-literal=LDAP_BIND_PASSWORD="${{ secrets.LDAP_BIND_PASSWORD }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       # 11) Deployments y Services de backend, frontend, mongo y

@@ -65,3 +65,7 @@ data:
   # desarrollo local.
   LDAP_USER_DN_TEMPLATE: "{username}@itu.local"
   LDAP_USE_SSL: "false"
+  # Cuenta de servicio para el bind de admin (lectura de grupos) en
+  # obtener_rol(), ver active-directory/README.md sección 4. El password
+  # va en kubernetes/secrets/backend-secret.example.yaml (LDAP_BIND_PASSWORD).
+  LDAP_BIND_DN: "svc-inventario@itu.local"
