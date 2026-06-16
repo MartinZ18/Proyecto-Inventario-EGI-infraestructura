@@ -19,9 +19,11 @@ compuesto por:
   SSH desde `pfsense/scripts/`) e iptables (host de Minikube). Las IPs
   de la red del laboratorio se resuelven dinámicamente (`infra/`, ver
   `docs/topologia-red.md`).
-- **Acceso externo**: Cloudflare Tunnel (`cloudflared`) expone el
-  frontend en `https://*.trycloudflare.com` sin abrir puertos; el
-  NodePort `:30080` sigue disponible para la LAN.
+- **Acceso externo**: NAT port-forward de pfSense
+  (`WAN:80 -> ${MINIKUBE_IP}:30080`, `pfsense/scripts/nat-port-forward.php`)
+  más un port-forward a nivel VirtualBox en `pfSense-Gateway`
+  (`host:80 -> WAN:80`) exponen el frontend fuera de la red Host-Only;
+  el NodePort `:30080` sigue disponible directo para la LAN.
 - **Orquestación**: Kubernetes (Minikube + Calico CNI), namespace
   `inventario`, con NetworkPolicies zero-trust.
 - **CI/CD**: GitHub Actions (`workflow_dispatch`) con runner
@@ -38,14 +40,17 @@ contiene el código de la aplicación (que vive en las ramas
 
 ```mermaid
 flowchart TB
-    subgraph INET["Internet"]
+    subgraph INET["Internet / red externa"]
         Cliente["Cliente externo\n(wifi/celular)"]
         ClienteLAN["Cliente (navegador, LAN)"]
-        CFEdge["Borde Cloudflare"]
+    end
+
+    subgraph VBOX["Host Windows + VirtualBox"]
+        VBOXNAT["pfSense-Gateway: host:80 -> WAN:80\n(VBoxManage natpf1)"]
     end
 
     subgraph PFS["pfSense (NAT gateway)"]
-        WAN["WAN (NAT VirtualBox)"]
+        WAN["WAN :80 (NAT VirtualBox)"]
         LAN["LAN ${PFSENSE_LAN_IP}\n= ${IP_RED_PROF}"]
     end
 
@@ -62,7 +67,6 @@ flowchart TB
             FE["frontend (nginx)\nNodePort :30080"]
             BE["backend (FastAPI)\nClusterIP :8000"]
             MONGO["mongo:7\ninventario_componentes\nClusterIP :27017"]
-            CF["cloudflared\n(Quick Tunnel)"]
             CM["ConfigMap backend-config"]
             SEC["Secret backend-secret"]
             EPS["sqlserver-service\n(Endpoints externos)"]
@@ -74,12 +78,10 @@ flowchart TB
         GH["Workflow deploy.yml\n(runner self-hosted en MK)"]
     end
 
-    Cliente -->|"HTTPS :443"| CFEdge
-    CFEdge -->|"túnel saliente :443/7844"| CF
-    CF -->|":80"| FE
-
+    Cliente -->|"HTTP :80"| VBOXNAT
+    VBOXNAT -->|"port-forward VirtualBox"| WAN
     ClienteLAN -->|"HTTP :80"| WAN
-    WAN -->|"NAT port-forward 80 -> 30080 (opcional)"| FE
+    WAN -->|"NAT port-forward 80 -> 30080"| FE
     LAN --- DC
     LAN --- SQLVM
     LAN --- MK
@@ -147,25 +149,27 @@ flowchart TB
 Ver el detalle completo en `docs/topologia-red.md` y `iptables/README.md`.
 Resumen de las 3 capas:
 
-1. **pfSense** (borde de red): NAT, port-forward opcional (80 →
-   NodePort 30080), autenticación de administradores contra AD.
-   Configurable como código vía SSH + `pfSsh.php playback`
+1. **pfSense** (borde de red): NAT, port-forward del frontend (80 →
+   NodePort 30080) como vía de acceso externo, autenticación de
+   administradores contra AD. Configurable como código vía SSH + `php -f`
    (`pfsense/scripts/`, ver `pfsense/README.md`).
 2. **Calico NetworkPolicies** (dentro del clúster): modelo
-   default-deny, 8 políticas (00-07) que permiten solo los flujos
-   estrictamente necesarios entre frontend/backend/mongo/SQL/AD/
-   cloudflared.
+   default-deny, 7 políticas (00-06) que permiten solo los flujos
+   estrictamente necesarios entre frontend/backend/mongo/SQL/AD.
 3. **iptables** (host de Minikube): filtra el tráfico dirigido al
    nodo (SSH, ICMP, NodePort), sin interferir con las cadenas que
    gestiona Calico.
 
-**Acceso externo (Cloudflare Tunnel)**: el pod `cloudflared` abre una
-conexión saliente hacia el borde de Cloudflare — no requiere abrir
-puertos entrantes en pfSense ni en el router de internet. La
-NetworkPolicy `07-allow-cloudflared-egress` acota esa salida a
-443/TCP + 7844/UDP, y el tráfico entrante hacia `frontend` sigue
-gobernado por `02-allow-frontend-ingress`: el modelo zero-trust dentro
-del clúster no cambia, solo se agrega una vía de entrada adicional.
+**Acceso externo (NAT port-forward)**: pfSense reenvía `WAN:80` hacia
+`${MINIKUBE_IP}:30080` (`pfsense/scripts/nat-port-forward.php`, requiere
+`wan-allow-private.php` aplicado primero — ver `pfsense/README.md`
+sección 1). Para que ese `WAN:80` sea alcanzable desde fuera de la red
+Host-Only, se agrega un port-forward a nivel VirtualBox en la VM
+`pfSense-Gateway` (`host:80 -> WAN:80`, mismo patrón que los de RDP/IIS
+en `pfsense/README.md` secciones 2.1/2.2). El tráfico entrante hacia
+`frontend` sigue gobernado por `02-allow-frontend-ingress` (acepta
+cualquier origen en :80): el modelo zero-trust dentro del clúster no
+cambia, solo cambia la vía de entrada externa.
 
 Además: credenciales nunca en el repo (Secrets de Kubernetes +
 GitHub Secrets), JWT con expiración corta (60 min), RBAC por rol de

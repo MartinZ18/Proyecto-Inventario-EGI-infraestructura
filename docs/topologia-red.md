@@ -4,32 +4,39 @@
 
 Topología recomendada: **todo en una PC** con VirtualBox, red Host-Only
 `192.168.56.0/24` (`IP_RED_PROF`) entre pfSense/AD/SQL Server/Minikube.
-El acceso externo (internet) sale por el pod `cloudflared` (Cloudflare
-Tunnel), independiente de pfSense. Ver `pfsense/README.md` (sección
-"Topología VirtualBox recomendada") para el detalle de adaptadores de
-red.
+El acceso externo se resuelve con un NAT port-forward de pfSense
+(`WAN:80 -> ${MINIKUBE_IP}:30080`, `pfsense/scripts/nat-port-forward.php`)
+más un port-forward a nivel VirtualBox en la VM `pfSense-Gateway`
+(`host:80 -> WAN:80`), sin depender de ningún servicio externo. Ver
+`pfsense/README.md` (secciones "Topología VirtualBox recomendada" y 2)
+para el detalle de adaptadores de red y los port-forwards.
 
 ```
-                                   Internet
+                                   Internet / red externa
                        ┌───────────────┴────────────────┐
                        │                                 │
-              pfSense WAN (NAT VBox)            cloudflared (pod en Minikube)
-                       │                         → https://*.trycloudflare.com
-                 ┌───────────┐                          │
-                 │  pfSense  │  NAT gateway + auth AD   │
-                 └───────────┘                          │
-                       │ LAN: ${PFSENSE_LAN_IP}          │
-                       │ Red Host-Only: ${IP_RED_PROF}   │ (default 192.168.56.0/24)
-   ┌───────────────────┼─────────────────────────────────┴──────────────────┐
-   │                    │                                                    │
+              Host Windows :80                  Cliente (navegador, LAN)
+       (VBoxManage natpf1                                │
+        pfSense-Gateway host:80->WAN:80)                 │
+                       │                                 │
+                       ▼                                 ▼
+              pfSense WAN :80 (NAT VBox)
+                       │
+                 ┌───────────┐
+                 │  pfSense  │  NAT gateway + auth AD
+                 └───────────┘
+                       │ LAN: ${PFSENSE_LAN_IP}
+                       │ Red Host-Only: ${IP_RED_PROF}   (default 192.168.56.0/24)
+   ┌───────────────────┼──────────────────────────────────────────────────────────┐
+   │                    │                                                          │
 ┌──────────────────┐    │    ┌─────────────────────┐    ┌────────────────────────────────┐
 │ AD DS+DNS+DHCP    │    │    │ SQL Server 2022      │    │ Host Minikube                    │
 │ DC01-ITU          │    │    │ Sin IIS/SSRS         │    │ ${MINIKUBE_IP}                   │
 │ ${DC_IP}          │    │    │ ${SQLSERVER_IP}      │    │ namespace: inventario, Calico CNI│
 │ :389 LDAP, :53 DNS│    │    │ :1433 SQL            │    │                                  │
 └─────────┬─────────┘    │    │ (descartado)         │    │  ┌─────────────────┐ NodePort   │
-          │              │    │ (ver README.md)      │    │  │ frontend (nginx) │──► :30080  │
-          │ LDAP :389    │    └──────────┬───────────┘    │  └────────┬────────┘  (LAN)     │
+          │              │    │ (ver README.md)      │    │  │ frontend (nginx) │──► :30080  │◄─ NAT 80->30080
+          │ LDAP :389    │    └──────────┬───────────┘    │  └────────┬────────┘  (pfSense) │
           │ (ipBlock     │  SQL :1433    │ (ipBlock       │           │ :8000               │
           │  egress)     │   egress)     │  egress)       │  ┌────────▼────────┐            │
           │              │               │                │  │ backend (FastAPI)│            │
@@ -37,10 +44,6 @@ red.
                               sqlserver-service             │           │ :27017              │
                               (Service + Endpoints)         │  ┌────────▼────────┐            │
                                                              │  │ mongo (mongo:7)  │            │
-                                                             │  └──────────────────┘            │
-                                                             │  ┌──────────────────┐            │
-                                                             │  │ cloudflared      │── arriba   │
-                                                             │  │ → frontend :80   │            │
                                                              │  └──────────────────┘            │
                                                              └──────────────────────────────────┘
 ```
@@ -85,11 +88,10 @@ directo desde `kubernetes/`.
 
 | Origen | Destino | Puerto/Protocolo | Por qué |
 |---|---|---|---|
-| Cliente externo (wifi/celular, internet) | `https://*.trycloudflare.com` | 443/TCP (HTTPS) | Acceso externo al frontend vía Cloudflare Tunnel, sin abrir puertos en pfSense |
-| `cloudflared` (pod) | Borde de Cloudflare (`0.0.0.0/0`) | 443/TCP + 7844/UDP | Conexión saliente del Quick Tunnel (`07-allow-cloudflared-egress.yaml`) |
-| `cloudflared` (pod) | `frontend-service` | 80/TCP | El túnel reenvía al frontend dentro del clúster |
-| Cliente (navegador, LAN) | pfSense WAN | 80/TCP | Acceso al frontend vía port-forward de pfSense (opcional, ver `pfsense/README.md` sección 2) |
-| pfSense | `frontend-service` (`${MINIKUBE_IP}:30080`) | 80/TCP (NAT port-forward) | Reenvío al NodePort del frontend |
+| Cliente externo (wifi/celular, fuera de la red Host-Only) | Host Windows `:80` | 80/TCP | Port-forward a nivel VirtualBox en `pfSense-Gateway` (`host:80 -> WAN:80`), ver `pfsense/README.md` sección 2 |
+| Host Windows (port-forward VirtualBox) | pfSense WAN `:80` | 80/TCP | El port-forward de VirtualBox entrega el tráfico al WAN de pfSense |
+| Cliente (navegador, LAN) | pfSense WAN `:80` | 80/TCP | Acceso directo al frontend vía port-forward de pfSense (ver `pfsense/README.md` sección 2) |
+| pfSense | `frontend-service` (`${MINIKUBE_IP}:30080`) | 80/TCP (NAT port-forward, `nat-port-forward.php`) | Reenvío al NodePort del frontend |
 | `frontend` (pod) | `backend-service` | 8000/TCP | Proxy `/api/` de nginx hacia FastAPI |
 | `backend` (pod) | `mongo-service` | 27017/TCP | Lectura/escritura de `inventario_componentes.computadoras` |
 | `backend` (pod) | `sqlserver-service` → `${SQLSERVER_IP}` | 1433/TCP | SQLAlchemy/pyodbc hacia `inventario_ubicaciones` |
@@ -103,7 +105,7 @@ directo desde `kubernetes/`.
 
 ## NetworkPolicies (zero-trust)
 
-Archivos en `kubernetes/network-policies/`, aplicados en orden (00 → 07):
+Archivos en `kubernetes/network-policies/`, aplicados en orden (00 → 06):
 
 | Archivo | Aplica a (`podSelector`) | Permite | Justificación (menor privilegio) |
 |---|---|---|---|
@@ -114,7 +116,6 @@ Archivos en `kubernetes/network-policies/`, aplicados en orden (00 → 07):
 | `04-allow-backend-from-frontend.yaml` | `app=backend` | ingress :8000 desde `app=frontend` | Nadie más puede llamar a la API directo, salteando el frontend |
 | `05-allow-backend-egress.yaml` | `app=backend` | egress :27017 → `app=mongo`; egress :1433/:389 → `ipBlock ${IP_RED_PROF}` | El backend habla con Mongo (pod) y con SQL Server/AD (VMs externas, acotado a la red del laboratorio) |
 | `06-allow-mongodb-from-backend.yaml` | `app=mongo` | ingress :27017 desde `app=backend` | Solo el backend accede a la base documental |
-| `07-allow-cloudflared-egress.yaml` | `app=cloudflared` | egress :443/TCP + :7844/UDP → `0.0.0.0/0` | El túnel necesita salir a internet para conectar al borde de Cloudflare; el ingress hacia `frontend` ya está cubierto por `02-allow-frontend-ingress` (acepta cualquier origen) |
 
 **SQL Server y AD usan `ipBlock`** porque son VMs fuera del clúster
 (no tienen `podSelector`). **MongoDB usa `podSelector`** porque corre

@@ -49,9 +49,11 @@ ajustalos en `infra/red.local.env` (gitignored) — ver
      SQL Server y Minikube.
    - **WAN**: adaptador "NAT" (el NAT por defecto de VirtualBox). Le da
      a pfSense salida a internet por su cuenta (actualizaciones,
-     sincronización horaria NTP) sin depender de ninguna red externa
-     real. No es la vía de acceso externo al frontend — para eso ver
-     `docs/topologia-red.md` (Cloudflare Tunnel / NodePort LAN).
+     sincronización horaria NTP) y es también la vía de acceso externo
+     al frontend: el NAT port-forward `WAN:80 -> ${MINIKUBE_IP}:30080`
+     (sección 2) más un port-forward a nivel VirtualBox
+     (`host:80 -> WAN:80`, también en sección 2) exponen el frontend
+     fuera de la red Host-Only — ver `docs/topologia-red.md`.
 
 3. **VM del Domain Controller (DC01-ITU)**: adaptador Host-Only, IP
    estática `192.168.56.10/24`, gateway `192.168.56.2` (pfSense).
@@ -193,13 +195,13 @@ de la cuenta `pfsense_bind` en AD, ver
 
 ## 2. Port-forward hacia el frontend (Minikube)
 
-> ℹ️ Esta es **una de varias formas** de exponer el frontend; el acceso
-> "real" desde fuera de la red para la defensa se resuelve con
-> **Cloudflare Tunnel** (`kubernetes/deployments/cloudflared-deployment.yaml`)
-> y/o el **NodePort `:30080`** directo (ver `docs/topologia-red.md`,
-> sección "Acceso externo"). Configurar este port-forward sigue siendo
-> útil para mostrar pfSense como NAT gateway funcional en la defensa
-> oral.
+> ℹ️ Esta es la vía de **acceso externo oficial** al frontend: el NAT
+> port-forward de pfSense (`WAN:80 -> ${MINIKUBE_IP}:30080`) combinado
+> con el port-forward a nivel VirtualBox (`host:80 -> WAN:80`, ver más
+> abajo) permite llegar al frontend desde fuera de la red Host-Only sin
+> depender de ningún servicio externo (se descartó Cloudflare Tunnel,
+> ver `docs/bitacora-despliegue.md`). El **NodePort `:30080`** directo
+> sigue disponible para la LAN (ver `docs/topologia-red.md`).
 
 El frontend del Inventario está expuesto como `frontend-service`
 (NodePort `30080`) en `${MINIKUBE_IP}` (IP estática del host de
@@ -231,6 +233,42 @@ Verificación:
 curl -I http://<IP_WAN_PFSENSE>/
 ```
 Debe responder `200 OK` (servido por nginx desde el pod `frontend`).
+
+---
+
+### Port-forward a nivel VirtualBox (acceso desde fuera de la red Host-Only)
+
+> ⚠️ El WAN de pfSense es un adaptador **NAT de VirtualBox**, no está
+> bridgeado a la red real. El `rdr` de arriba redirige dentro de esa
+> NAT; para que el frontend sea alcanzable desde la PC Windows real (o
+> desde fuera) hace falta además un port-forward a nivel VirtualBox,
+> mismo patrón que el de RDP (sección 2.1) e IIS (sección 2.2) pero con
+> `:80` directo (no hay otro port-forward que reserve ese puerto en el
+> host).
+
+**Port-forward a nivel VirtualBox** (host Windows, VM `pfSense-Gateway`
+apagada antes de correrlo):
+
+```powershell
+$VBoxManage = "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
+& $VBoxManage controlvm pfSense-Gateway acpipowerbutton   # esperar a que apague
+& $VBoxManage modifyvm pfSense-Gateway --natpf1 "inventario-frontend,tcp,,80,,80"
+& $VBoxManage startvm pfSense-Gateway --type headless
+```
+
+Verificación desde la PC Windows:
+
+```powershell
+curl.exe http://127.0.0.1/
+```
+
+Debe responder `200 OK` (servido por nginx desde el pod `frontend`, vía
+`host:80 -> pfSense WAN:80 -> NAT -> ${MINIKUBE_IP}:30080`).
+
+Si además se necesita acceso desde fuera de la PC (otra red/internet),
+falta un port-forward equivalente en el router de esa red hacia el
+puerto `80` de la PC — no configurado, no bloqueante (mismo caso que
+RDP/IIS, secciones 2.1/2.2).
 
 ---
 
@@ -476,8 +514,12 @@ provienen del rango configurado en AD DS.
 - [x] SSH habilitado (System > Advanced > Admin Access), acceso por
       clave pública desde la PC Windows funciona.
 - [ ] Port-forward `WAN:80 → ${MINIKUBE_IP}:30080` responde `200 OK`
-      (opcional — diferido a Fase 5, cuando el frontend esté desplegado
-      en Minikube).
+      (acceso externo oficial — diferido a Fase 5, cuando el frontend
+      esté desplegado en Minikube; ver sección 2 y "Port-forward a
+      nivel VirtualBox").
+- [ ] Port-forward a nivel VirtualBox `host:80 -> WAN:80` en
+      `pfSense-Gateway` aplicado y `curl http://127.0.0.1/` desde la PC
+      Windows responde `200 OK` (sección 2).
 - [x] Authentication Server `AD-ITU-Laboratorio` configurado. pfSense 2.8
       no tiene botón *Test connection*; se verificó el bind LDAP por SSH
       (`ldapwhoami` como `pfsense_bind`) y con un login real exitoso.

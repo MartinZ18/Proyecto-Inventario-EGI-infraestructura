@@ -126,11 +126,15 @@ usuario) funciona sin cambios contra AD: por ejemplo, el login
 
 ---
 
-## 4. ⚠️ Acción requerida en el backend (rama `backend`)
+## 4. ✅ Cambios aplicados en el backend para funcionar contra AD (rama `backend`)
 
-`app/services/ldap_service.py::obtener_rol()` necesita un **segundo
-bind administrativo** para poder leer los grupos del usuario y
-determinar su rol (Técnico/Docente/Alumno). Hoy ese segundo bind está
+`app/services/ldap_service.py::obtener_rol()` necesitaba dos cambios para
+funcionar contra Active Directory en lugar del OpenLDAP de desarrollo.
+Ambos ya están aplicados en el código.
+
+### 4.1. Bind administrativo (segundo bind)
+
+El segundo bind (necesario para leer los grupos del usuario) estaba
 **hardcodeado para el OpenLDAP de desarrollo**:
 
 ```python
@@ -146,14 +150,14 @@ Esto **no funciona contra Active Directory**: AD no tiene una cuenta
 `cn=admin`, y la contraseña `"admin"` es solo del contenedor
 `osixia/openldap` de desarrollo.
 
-**Cambio necesario** (a coordinar con el integrante de backend):
+**Cambio aplicado:**
 
-1. Agregar dos campos a `Settings` (`app/core/config.py`):
+1. Se agregaron dos campos a `Settings` (`app/core/config.py`):
    ```python
    ldap_bind_dn: str
    ldap_bind_password: str
    ```
-2. En `obtener_rol()`, reemplazar el bind hardcodeado por:
+2. En `obtener_rol()`, el bind hardcodeado se reemplazó por:
    ```python
    admin_conn = Connection(
        server,
@@ -162,16 +166,56 @@ Esto **no funciona contra Active Directory**: AD no tiene una cuenta
        auto_bind=True,
    )
    ```
-3. Configurar (en `backend-secret`, ver
+3. Configurado en `backend-secret` (ver
    `kubernetes/secrets/backend-secret.example.yaml`):
    - `LDAP_BIND_DN = svc-inventario@itu.local`
    - `LDAP_BIND_PASSWORD = Inventario!2025` (la del usuario `svc-inventario`
      creado por `04-crear-usuarios-grupos.ps1`)
 
-Hasta que este cambio se incorpore al backend, el login contra AD
-**validará credenciales correctamente** (el primer bind con
-`LDAP_USER_DN_TEMPLATE` sí funciona), pero `obtener_rol()` devolverá
-`None` y el RBAC (`requiere_tecnico`) no podrá distinguir roles.
+### 4.2. Resolución de rol vía `member=` (UPN vs DN)
+
+Con el bind administrativo ya correcto, `obtener_rol()` seguía devolviendo
+`None` (login `mgomez` / `Inventario!2025` → 401 pese a tener credenciales
+correctas). La causa era la búsqueda de rol, que filtraba cada grupo con:
+
+```python
+search_filter=f"(member={user_dn})"
+```
+
+donde `user_dn = "mgomez@itu.local"` (formato UPN, el mismo usado para el
+bind). En Active Directory el atributo `member` de un grupo guarda el
+**Distinguished Name** del miembro (ej.
+`CN=María Gómez,OU=User,OU=ITU,DC=itu,DC=local`), no el UPN — ese filtro
+nunca matcheaba ningún grupo y `obtener_rol()` devolvía `None` para
+cualquier usuario.
+
+**Cambio aplicado:** `obtener_rol()` ahora busca al propio usuario por
+`userPrincipalName` y lee su atributo `memberOf` (back-link que AD
+mantiene automáticamente con los DNs de los grupos a los que pertenece),
+comparando el prefijo `cn={grupo},` contra esos DNs:
+
+```python
+admin_conn.search(
+    search_base=settings.ldap_base_dn,
+    search_filter=f"(userPrincipalName={user_dn})",
+    search_scope=SUBTREE,
+    attributes=["memberOf"],
+)
+
+rol = None
+if admin_conn.entries:
+    atributos = admin_conn.entries[0].entry_attributes_as_dict
+    grupos_usuario = atributos.get("memberOf", [])
+    for grupo in ("Tecnicos", "Docentes", "Alumnos"):
+        prefijo = f"cn={grupo},".lower()
+        if any(dn.lower().startswith(prefijo) for dn in grupos_usuario):
+            rol = grupo
+            break
+```
+
+Con los cambios de 4.1 y 4.2, el login `mgomez` / `Inventario!2025` valida
+credenciales **y** devuelve el rol `Tecnicos`, habilitando
+`requiere_tecnico`.
 
 ---
 
@@ -185,5 +229,7 @@ Hasta que este cambio se incorpore al backend, el login contra AD
 - [ ] Bind de prueba `mgomez@itu.local` / `Inventario!2025` exitoso
       (puede probarse con `ldapsearch` o `Test-LdapConnection` desde
       otra máquina apuntando a `192.168.56.10:389`, default `DC_IP`).
-- [ ] Cambio de `obtener_rol()` (sección 4) coordinado con backend —
-      o documentado como pendiente para la defensa oral.
+- [x] Cambios de `obtener_rol()` (sección 4) incorporados al código del
+      backend (bind administrativo `LDAP_BIND_DN`/`LDAP_BIND_PASSWORD` +
+      resolución de rol vía `memberOf`). Pendiente: rebuild/redeploy de
+      la imagen en Minikube y reverificar login de `mgomez`.

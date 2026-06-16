@@ -21,7 +21,7 @@ Redes** del equipo.
   seguridad en capas.
 - 🌐 **`docs/topologia-red.md`** — diagrama de red, esquema de
   configuración de red dinámica, matriz de puertos/protocolos y
-  detalle de las 8 NetworkPolicies zero-trust.
+  detalle de las 7 NetworkPolicies zero-trust (00-06).
 - 🚀 **`docs/runbook-despliegue.md`** — orden de despliegue end-to-end
   (Fase 0: red local → AD → SQL Server → pfSense → Minikube/Calico
   → Kubernetes → GitHub Actions), con comandos y checklists por fase.
@@ -44,10 +44,10 @@ Redes** del equipo.
 │   ├── 00-namespace.yaml
 │   ├── configmaps/          Configuración no sensible del backend
 │   ├── secrets/             Plantilla de Secret (no se commitean valores reales)
-│   ├── deployments/         backend, frontend, mongo, cloudflared
+│   ├── deployments/         backend, frontend, mongo
 │   ├── services/            ClusterIP/NodePort
 │   ├── external/            Endpoints hacia SQL Server y AD (placeholders ${VAR})
-│   ├── network-policies/    8 políticas zero-trust (00-07, incluye cloudflared)
+│   ├── network-policies/    7 políticas zero-trust (00-06)
 │   └── _generated/          (gitignored) manifiestos con ${VAR} ya resueltos
 ├── .github/workflows/       Pipeline de despliegue (deploy.yml)
 ├── pfsense/                 Runbook + automatización (SSH/pfSsh.php)
@@ -84,17 +84,15 @@ reemplazarse:
 
 - **LAN (NodePort `:30080`)**: cualquier equipo en la red del
   laboratorio puede abrir `http://${MINIKUBE_IP}:30080` directamente, o
-  vía el port-forward opcional de pfSense (`pfsense/README.md`,
-  sección 2).
-- **Internet (Cloudflare Tunnel)**: el Deployment `cloudflared`
-  (`kubernetes/deployments/cloudflared-deployment.yaml`) abre un Quick
-  Tunnel gratuito y expone el frontend en una URL pública
-  `https://*.trycloudflare.com`, sin abrir puertos ni necesitar IP
-  pública. Obtener la URL con:
-  ```bash
-  kubectl logs -n inventario deploy/cloudflared | grep trycloudflare
-  ```
-  (el último paso de `.github/workflows/deploy.yml` también la imprime).
+  vía el port-forward de pfSense (`pfsense/README.md`, sección 2).
+- **Fuera de la red del laboratorio (NAT port-forward)**: pfSense
+  reenvía `WAN:80 -> ${MINIKUBE_IP}:30080`
+  (`pfsense/scripts/nat-port-forward.php`, requiere
+  `wan-allow-private.php` aplicado primero) y, para llegar desde fuera
+  de la red Host-Only, un port-forward a nivel VirtualBox en la VM
+  `pfSense-Gateway` (`host:80 -> WAN:80`, mismo patrón que los de
+  RDP/IIS). No depende de ningún servicio externo. Ver
+  `pfsense/README.md` sección 2 para los comandos.
 
 ---
 

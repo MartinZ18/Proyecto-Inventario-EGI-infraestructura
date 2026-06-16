@@ -1,9 +1,10 @@
 # ============================================================
 # Service NodePort del frontend. Punto de entrada en la LAN del
-# laboratorio (http://${MINIKUBE_IP}:30080), opcionalmente reenviado
-# por pfSense (ver pfsense/README.md). El acceso externo a internet se
-# resuelve aparte via Cloudflare Tunnel
-# (kubernetes/deployments/cloudflared-deployment.yaml), ver
+# laboratorio (http://${MINIKUBE_IP}:30080). El acceso externo se
+# resuelve reenviando este NodePort: pfSense (NAT port-forward
+# WAN:80 -> ${MINIKUBE_IP}:30080, ver pfsense/README.md sección 2) y,
+# para llegar desde fuera de la red Host-Only, un port-forward a nivel
+# VirtualBox en la VM pfSense-Gateway (host:80 -> WAN:80), ver
 # docs/topologia-red.md.
 # ============================================================
 apiVersion: v1

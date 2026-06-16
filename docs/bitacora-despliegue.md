@@ -306,6 +306,261 @@ del resto del repo (aclarado en `sql-server-iis/README.md`).
 
 ---
 
+## Decisión: acceso externo vía NAT port-forward + VirtualBox, se descarta Cloudflare Tunnel (2026-06-15)
+
+- **Qué se quitó**: el Deployment `cloudflared`
+  (`kubernetes/deployments/cloudflared-deployment.yaml`) y la
+  NetworkPolicy `07-allow-cloudflared-egress.yaml`. Las NetworkPolicies
+  pasan de 8 (00-07) a 7 (00-06).
+- **Por qué**: el port-forward NAT de pfSense (`WAN:80 ->
+  ${MINIKUBE_IP}:30080`, ya scripteado en
+  `pfsense/scripts/nat-port-forward.php` desde la Fase 3, "Diferido a
+  Fase 5") más el NodePort `:30080` de Minikube ya alcanzan para que el
+  frontend sea visible desde fuera del laboratorio, agregando un
+  port-forward a nivel VirtualBox en `pfSense-Gateway` (`host:80 ->
+  WAN:80`) — exactamente el mismo patrón ya verificado de punta a punta
+  para RDP (`40100`/`40200`) e IIS "almacenes" (`40080`) en los extras de
+  la Fase 3. No hace falta depender de un servicio externo (Cloudflare)
+  ni de su Quick Tunnel.
+- **Qué se actualizó** (8 archivos): `kubernetes/services/frontend-service.yaml`
+  (comentario), `docs/arquitectura.md`, `docs/topologia-red.md`,
+  `pfsense/README.md` (nueva subsección con los comandos `VBoxManage
+  natpf1` para `host:80 -> WAN:80`), `docs/runbook-despliegue.md` (Fase
+  5: comandos + checklist; Fase 6: checklist; "Orden resumido para la
+  defensa oral" paso 6), `README.md` (raíz: estructura del repo +
+  sección "Acceso externo") y `.github/workflows/deploy.yml` (se quita
+  el rollout de `cloudflared` y el bloque que buscaba la URL
+  `*.trycloudflare.com`).
+### ✅ Verificado de punta a punta (2026-06-15)
+
+- El port-forward a nivel VirtualBox (`host:80 -> WAN:80` en
+  `pfSense-Gateway`, `inventario-frontend,tcp,,80,,80`) ya estaba
+  aplicado.
+- **Faltaba el `rdr` de pfSense**: `pfctl -s nat` solo mostraba los
+  redirects de RDP (`40100`/`40200`) e IIS (`40080`), sin ninguna regla
+  para el puerto 80. Por eso `curl http://127.0.0.1/` se quedaba
+  **colgado sin responder** (no "connection refused"): el motor NAT de
+  VirtualBox completa el handshake TCP con el cliente localmente, pero
+  al no existir el `rdr` el paquete llega al WAN de pfSense y se
+  descarta en silencio — mismo síntoma de "cuelgue silencioso" que el
+  bloqueo de "private networks" documentado en Fase 3, pero esta vez por
+  falta de la regla `rdr`, no por el filtro WAN.
+- Se aplicó `.\pfsense\scripts\aplicar-config-pfsense.ps1 -Script
+  nat-port-forward`, que crea
+  `rdr on em0 inet proto tcp from any to any port = http -> 192.168.56.30 port 30080`.
+  El warning `"Quedaron placeholders sin sustituir: ${VAR}"` que tira el
+  script es un **falso positivo**: es texto literal de un comentario
+  dentro de `nat-port-forward.php` (explica el patrón de placeholders),
+  no un placeholder real sin reemplazar — confirmado porque el `rdr`
+  aplicado usa la IP correcta `192.168.56.30`.
+- `curl.exe http://127.0.0.1/` desde la PC Windows devuelve `200 OK`,
+  `Server: nginx/1.25.5`, con la página de login del Inventario ITU
+  completa. Cadena verificada de punta a punta:
+  `PC Windows :80 (VBoxHeadless/natpf) -> pfSense WAN:80 (rdr) ->
+  192.168.56.30:30080 (NodePort) -> frontend (nginx)`.
+- De paso confirma que **Fase 5 (frontend) está desplegada y corriendo**
+  en el clúster.
+
+### Abierto / no bloqueante
+
+- Si en algún momento se aplicó el Deployment `cloudflared` o la
+  NetworkPolicy `allow-cloudflared-egress` al clúster vivo (corrida
+  previa de Fase 5/6 antes de esta decisión), removerlos:
+  ```bash
+  kubectl delete -f kubernetes/deployments/cloudflared-deployment.yaml -n inventario
+  kubectl delete networkpolicy allow-cloudflared-egress -n inventario
+  ```
+- Acceso desde *fuera* de esta PC (otra red/internet) requiere además un
+  port-forward en el router de esa red hacia el puerto 80 de esta PC —
+  no configurado, no bloqueante (mismo caso que RDP/IIS en Fase 3).
+
+---
+
+## Fase 5 — Verificación backend/login tras reinicio de VMs (2026-06-15)
+
+Contexto: al cerrar la sesión anterior, el pod `backend` estaba en
+`CrashLoopBackOff` ("Login timeout expired" contra SQL Server
+`192.168.56.20`) porque las VMs **SQL Server (.20)** y **AD-DC (.10)**
+estaban apagadas en VirtualBox (`VBoxManage list runningvms` solo
+mostraba `pfSense-Gateway` y `LinuxEGI`). El usuario encendió ambas VMs.
+
+### ✅ Verificado tras encender ambas VMs
+
+- `VBoxManage list runningvms` -> las 4 VMs corriendo; ping OK a `.10` y
+  `.20` desde la PC Windows.
+- `kubectl get pods -n inventario`: `backend` `1/1 Running, 0 restarts`
+  (pod nuevo, recreado tras el reinicio), logs limpios (`Application
+  startup complete`, sin errores de conexión a SQL Server).
+- LDAP/AD-DC: puerto `389` responde desde LinuxEGI.
+- **Login end-to-end**: `POST /auth/login` (form-encoded,
+  `OAuth2PasswordRequestForm` — no es JSON) con el usuario de prueba
+  `mgomez` / `Inventario!2025` (grupo `Tecnicos`, ver
+  `active-directory/scripts/04-crear-usuarios-grupos.ps1`) -> `200 OK`,
+  devuelve JWT con `"rol":"Tecnicos"`. Confirma que el bind
+  `svc-inventario@itu.local` + lectura de grupos (`obtener_rol()`)
+  funciona contra el AD real — el ítem "Abierto" de Fase 1 sobre
+  `obtener_rol()` queda resuelto/funcionando.
+
+### ✅ Resuelto: mismatch de nombres de tabla en `inventario_ubicaciones`
+
+`GET /inventario/` con el JWT de `mgomez` -> `200 OK` pero `[]` (lista
+vacía, sin error). Causa: la base `inventario_ubicaciones` tenía **10
+tablas**, dos sets:
+
+- `Ubicacion`, `Equipo`, `Persona`, `Asignacion`, `Mantenimiento`
+  (PascalCase singular, creadas por
+  `database/scripts/Script SQL Server 2022.sql` de la rama
+  `bases-de-datos`) -> **tenían los datos del seed** (11/12/12/13/12
+  filas).
+- `ubicaciones`, `equipos`, `personas`, `asignaciones`,
+  `mantenimientos` (minúscula plural, `__tablename__` de
+  `app/models/inventario.py`, creadas vacías por
+  `Base.metadata.create_all()` al arrancar el backend) -> **0 filas**,
+  son las que usa el ORM (`equipo_repo.py`).
+
+Columnas compatibles entre ambos sets (`equipos` solo agrega `mesa`,
+nullable, ausente en el seed original -> queda `NULL`). Mismo patrón en
+las otras 4 tablas.
+
+**Fix aplicado y verificado**: se copiaron los datos con `INSERT INTO
+<tabla_minuscula> (...) SELECT ... FROM <TablaPascalCase>` en orden de
+FKs (`ubicaciones` -> `personas` -> `equipos` -> `asignaciones` ->
+`mantenimientos`), `mesa = NULL`. Ejecutado como script Python puntual
+dentro del pod `backend` (`kubectl exec ... -- python check_db.py`,
+usando el `engine` de SQLAlchemy ya configurado) — no se tocó ningún
+archivo de migración del repo, fue una migración de datos en runtime,
+de una sola vez.
+
+```
+Antes:   {'ubicaciones': 0,  'personas': 0,  'equipos': 0,  'asignaciones': 0,  'mantenimientos': 0}
+Despues: {'ubicaciones': 11, 'personas': 12, 'equipos': 12, 'asignaciones': 13, 'mantenimientos': 12}
+```
+
+Verificación final: `GET /inventario/` con el JWT de `mgomez` -> `200
+OK`, devuelve los **12 equipos completos** (cada uno con `ubicacion`,
+`asignaciones` con su `persona`, y `mantenimientos` con su `tecnico`).
+
+Las tablas PascalCase quedan como leftover (se podrían borrar después,
+no bloqueante). Pendiente para los compañeros de `bases-de-datos`/
+`backend`: alinear la convención de nombres de tabla entre el script de
+seed y los modelos del ORM para evitar este problema en un re-seed desde
+cero.
+
+### ✅ Resuelto: `componentes` de Mongo solo presente en 1 de 12 equipos
+
+De los 12 equipos devueltos por `/inventario/`, solo `id_equipo: 10`
+(Dell OptiPlex 7090 desktop) traía `componentes` no nulo. Mismo patrón
+que el mismatch de SQL Server, del lado de Mongo:
+
+- `inventario_componentes.computadoras` (nombres correctos según
+  `computadora_repo.py` / `MONGO_DB`) tenía **2 documentos**: `id_equipo:
+  10` y `id_equipo: 20` — exactamente el seed de
+  `Proyecto-Inventario-EGI-backend/scripts-dev/componentes_prueba.js`.
+  De esos, `10` matchea un equipo real de SQL Server; `20` no existe en
+  `equipos` (1-12) y queda huérfano.
+- `inventario_db.componentes` (nombres usados por
+  `database/scripts/inventario-db_mongo.js` de la rama
+  `bases-de-datos`, con los **12 documentos completos** `id_equipo`
+  1-12 alineados 1 a 1 con los 12 equipos de SQL Server) **no existía**
+  — ese seed nunca se ejecutó contra este clúster.
+
+**Fix aplicado y verificado**: se cargaron los 12 documentos de
+`inventario-db_mongo.js` (con su `$jsonSchema` validator e índices)
+directamente en `inventario_componentes.computadoras` — adaptando solo
+el nombre de base/colección, mismo patrón que el fix de SQL Server.
+Ejecutado con `mongosh` dentro del pod `mongo` (`db.computadoras.drop()`
++ `createCollection` con validator + `insertMany` de los 12 docs),
+reemplazando los 2 docs de prueba.
+
+Verificación final: `GET /inventario/` devuelve los 12 equipos, cada uno
+con `componentes` no nulo (cpu, ram, almacenamiento, sistema operativo,
+y `perifericos` o `bateria`/`pantalla_integrada` según `tipo`).
+
+Pendiente para los compañeros de `bases-de-datos`/`backend`: igual que
+con SQL Server, alinear la convención de nombres (`inventario_db` vs
+`inventario_componentes`, `componentes` vs `computadoras`) para evitar
+este problema en un re-seed desde cero.
+
+### ✅ NetworkPolicies verificadas (2026-06-15)
+
+`kubectl get networkpolicy -n inventario` muestra las **7 políticas**
+(`default-deny-all`, `allow-dns`, `allow-frontend-ingress`,
+`allow-frontend-egress`, `allow-backend-from-frontend`,
+`allow-backend-egress`, `allow-mongodb-from-backend`) — coinciden 1 a 1
+con los 7 archivos `00-06` de `kubernetes/network-policies/`.
+
+Se comparó el spec de cada una contra el repo: todas coinciden
+exactamente, incluyendo `allow-backend-egress`, cuyo placeholder
+`${IP_RED_PROF}` quedó correctamente sustituido por `192.168.56.0/24`
+(generado con `infra/scripts/generar-manifiestos.sh`).
+
+Además, el hecho de que **login + `/inventario/` con datos completos**
+ya funcionaron de punta a punta (verificaciones de arriba) es evidencia
+funcional de que las políticas no están bloqueando ningún tráfico
+legítimo: con `default-deny-all` activo, si faltara `allow-dns`,
+`allow-backend-egress` (Mongo/SQL/LDAP) o `allow-backend-from-frontend`,
+esas llamadas habrían fallado.
+
+### 🔄 Fase 6 — GitHub Actions (CI/CD): preparación iniciada (2026-06-15)
+
+Revisado `.github/workflows/deploy.yml` (comentarios de cabecera) y el
+checklist de `docs/runbook-despliegue.md` sección "Fase 6". Avance hecho
+desde el lado de LinuxEGI (host de Minikube, futuro runner):
+
+- **Prerrequisitos del runner verificados en LinuxEGI**: `minikube
+  status` → `Running` (control-plane/kubelet/apiserver OK), `kubectl
+  v1.36.1`, `envsubst` disponible (`gettext-base`). Usuario `itu` en el
+  grupo `docker`.
+- **Binario del runner descargado y preparado**: `actions-runner-linux-x64-2.335.1.tar.gz`
+  descargado y extraído en `~/actions-runner/` en LinuxEGI. `./config.sh
+  --help` corre sin problemas (no hace falta `installdependencies.sh`
+  para que funcione el runtime .NET del runner en este host).
+- **`infra/red.local.env` en `~/inventario/infraestructura`**: ya existe
+  y sus valores son **idénticos** a `infra/red.example.env` (que a su vez
+  ya coinciden con las IPs reales del lab: `IP_RED_PROF=192.168.56.0/24`,
+  `MINIKUBE_IP=192.168.56.30`, `SQLSERVER_IP=192.168.56.20`,
+  `DC_IP=192.168.56.10`, `PFSENSE_LAN_IP=192.168.56.2`). Esto importa
+  porque `actions/checkout@v4` hace `git clean` del workspace del job, así
+  que un `red.local.env` puesto a mano en el checkout del runner no
+  sobreviviría entre corridas — pero como `red.example.env` (committeado,
+  sobrevive el checkout) ya tiene los valores correctos para este lab, el
+  fallback de `infra/scripts/detectar-red.sh` (`source
+  infra/red.example.env` con aviso) alcanza igual.
+
+### ✅ Runner self-hosted registrado y corriendo (2026-06-15)
+
+`./config.sh --unattended --url https://github.com/MartinZ18/Proyecto-Inventario-EGI-infraestructura --token <token-registro> --labels minikube --name linuxegi-minikube`
+corrió OK ("Runner successfully added", "Settings Saved"). Labels:
+`self-hosted, Linux, X64, minikube` — coincide con `runs-on:
+[self-hosted, minikube]` de `deploy.yml`.
+
+Arrancado con `nohup ./run.sh > runner.log 2>&1 < /dev/null & disown`
+(no se pudo usar `sudo ./svc.sh install` porque el usuario `itu` necesita
+password para sudo — pendiente para dejarlo como servicio systemd
+persistente entre reboots). Confirmado proceso `Runner.Listener` corriendo
+y log mostrando `Listening for Jobs`.
+
+**Pendiente — requiere acciones del usuario en la UI web de GitHub**
+(no automatizables desde aquí: no hay `gh` CLI disponible ni acceso a
+navegador):
+
+1. Cargar los 7 GitHub Secrets del repo de infraestructura:
+   `REPO_ACCESS_TOKEN`, `JWT_SECRET`, `SQLSERVER_USER`,
+   `SQLSERVER_PASSWORD`, `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD`,
+   `LDAP_BIND_PASSWORD` (el workflow los mapea a `backend-secret`, ver
+   cabecera de `deploy.yml`).
+2. Disparar el workflow manualmente (Actions → "Deploy Inventario ITU a
+   Minikube" → Run workflow) y verificar rollout + acceso al frontend.
+
+⚠️ **Observación de seguridad pendiente (sin resolver, a pedido del
+usuario se retoma después)**: el remote `origin` del checkout
+`~/inventario/infraestructura` en LinuxEGI tiene un Personal Access Token
+de GitHub embebido en texto plano en la URL (visible con `git remote -v`
+/ `.git/config`). Recomendado rotar ese token y reconfigurar el remote sin
+credenciales embebidas (SSH key o credential helper) antes de la defensa.
+
+---
+
 ## Cómo seguir
 
 **Fases 0-4 cerradas del todo**, incluidos los extras post-Fase 3 (RDP a
@@ -313,20 +568,21 @@ las VMs del lab en `40100`/`40200` e IIS "almacenes" en `40080`, ambos
 verificados de punta a punta el 2026-06-15) y el endurecimiento iptables
 de Fase 4.
 
-Próxima fase: **Fase 5 — Kubernetes (apps + NetworkPolicies)**
-(`docs/runbook-despliegue.md`, sección "Fase 5"): generar los
-manifiestos con `infra/scripts/detectar-red.sh` +
-`infra/scripts/generar-manifiestos.sh`, aplicar namespace/configmaps/
-secret/deployments/services, y por último las NetworkPolicies. Recordar
-el seed correcto de MongoDB
-(`Proyecto-Inventario-EGI-backend/scripts-dev/componentes_prueba.js`, no
-el de `bases-de-datos`).
+**Fase 5 — Kubernetes (apps + NetworkPolicies) ✅ cerrada (2026-06-15)**
+(`docs/runbook-despliegue.md`, sección "Fase 5"): frontend, backend y
+mongo están desplegados y `Running`; login end-to-end contra AD
+verificado (`mgomez` -> JWT con rol `Tecnicos`); migración de datos de
+SQL Server y de MongoDB aplicadas y verificadas (`/inventario/` devuelve
+los 12 equipos completos, cada uno con su `componentes` de Mongo, ver
+arriba); las 7 NetworkPolicies están aplicadas y verificadas contra el
+repo (ver arriba).
 
-Orden de las fases restantes (sin cambios respecto al runbook):
-
-```
-5. Kubernetes (apps + NetworkPolicies)  →  6. GitHub Actions (CI/CD)
-```
+**Fase 6 — GitHub Actions (CI/CD) 🔄 en progreso (2026-06-15)**: ver
+sección de arriba. Preparación del lado de LinuxEGI lista (runner
+descargado, prerrequisitos OK, `red.local.env`/`red.example.env` ya
+coinciden con las IPs reales); falta registrar el runner y cargar los
+GitHub Secrets desde la UI web (requiere al usuario), y disparar el
+workflow.
 
 Cada fase tiene su propio detalle paso a paso y checklist en
 `docs/runbook-despliegue.md`; esta bitácora se va a ir completando con

@@ -22,8 +22,8 @@ antes de pasar a la siguiente fase.
 | 2 — SQL Server 2022 | ✅ Completa |
 | 3 — pfSense | ✅ Completa |
 | 4 — Minikube + Calico | ✅ Completa |
-| 5 — Kubernetes (apps + NetworkPolicies) | ⏳ Próxima fase |
-| 6 — GitHub Actions (CI/CD) | ⏳ Pendiente |
+| 5 — Kubernetes (apps + NetworkPolicies) | ✅ Completa |
+| 6 — GitHub Actions (CI/CD) | 🔄 En progreso (runner registrado y corriendo en LinuxEGI; falta cargar GitHub Secrets y disparar el workflow) |
 
 📄 Detalle de lo hecho en cada fase, decisiones tomadas (p. ej. IIS/SSRS
 descartado en Fase 2) y pendientes abiertos para retomar: ver
@@ -229,7 +229,7 @@ docker build -t inventario-api:latest <ruta-checkout-backend>
 cp docker/frontend/nginx.conf docker/frontend/.dockerignore <ruta-checkout-frontend>/
 docker build -f docker/frontend/Dockerfile -t inventario-web:latest <ruta-checkout-frontend>
 
-# 4. Deployments + Services (incluye cloudflared, acceso externo)
+# 4. Deployments + Services
 kubectl apply -f kubernetes/deployments/
 kubectl apply -f kubernetes/services/
 
@@ -240,11 +240,13 @@ kubectl apply -f kubernetes/_generated/network-policies/
 kubectl get pods -n inventario -o wide
 kubectl rollout status deployment/backend -n inventario
 kubectl rollout status deployment/frontend -n inventario
-kubectl rollout status deployment/cloudflared -n inventario
+kubectl rollout status deployment/mongo -n inventario
 curl http://${MINIKUBE_IP}:30080/
 
-# 7. Obtener la URL pública (Cloudflare Tunnel)
-kubectl logs -n inventario deploy/cloudflared | grep trycloudflare
+# 7. Acceso externo: aplicar (una sola vez, desde la PC Windows) el NAT
+#    port-forward de pfSense y el port-forward a nivel VirtualBox
+#    (ver pfsense/README.md seccion 2)
+#    .\pfsense\scripts\aplicar-config-pfsense.ps1 -Script nat-port-forward
 ```
 
 ⚠️ Recordar el seed de MongoDB: usar
@@ -253,10 +255,11 @@ kubectl logs -n inventario deploy/cloudflared | grep trycloudflare
 `bases-de-datos` (`inventario_db.componentes`). Ver la nota en
 `kubernetes/deployments/mongo-deployment.yaml`.
 
-✅ Checklist: los 4 Deployments en `Running` (1/1), `curl` al frontend
+✅ Checklist: los 3 Deployments en `Running` (1/1), `curl` al frontend
 responde `200`, login desde el navegador funciona, `/inventario/`
-devuelve datos combinados de SQL Server + Mongo, y la URL
-`https://*.trycloudflare.com` carga el frontend desde fuera de la red
+devuelve datos combinados de SQL Server + Mongo, y `curl http://127.0.0.1/`
+desde la PC Windows (port-forward VirtualBox + NAT pfSense, ver
+`pfsense/README.md` sección 2) carga el frontend desde fuera de la red
 del laboratorio.
 
 ---
@@ -281,10 +284,11 @@ con el detalle de runner y secrets).
    a Minikube → Run workflow**.
 
 ✅ Checklist: el workflow termina en verde, `kubectl get pods -n
-inventario` muestra los 4 Deployments actualizados (incluye
-`cloudflared`), el frontend sigue accesible vía NodePort/pfSense, y el
-último paso del workflow ("Estado del despliegue") imprime una URL
-`https://*.trycloudflare.com` que carga el frontend.
+inventario` muestra los 3 Deployments actualizados, el frontend sigue
+accesible vía NodePort/pfSense, y el último paso del workflow ("Estado
+del despliegue") imprime la URL LAN (`http://${MINIKUBE_IP}:30080`) y
+recuerda el acceso externo vía el port-forward NAT de pfSense +
+VirtualBox (`pfsense/README.md` sección 2).
 
 ---
 
@@ -298,6 +302,7 @@ inventario` muestra los 4 Deployments actualizados (incluye
 5. Mostrar una NetworkPolicy bloqueando tráfico no permitido (por
    ejemplo, `kubectl exec` en el pod `frontend` e intentar conectar
    directo a `mongo-service:27017` → debe fallar).
-6. Abrir la URL de Cloudflare Tunnel (`https://*.trycloudflare.com`,
-   impresa al final del workflow) desde un celular con datos móviles
-   (fuera de la red del laboratorio) para mostrar el acceso externo real.
+6. Abrir `http://<IP_WAN_PFSENSE_O_PUBLICA>/` (NAT port-forward de
+   pfSense + port-forward VirtualBox `host:80 -> WAN:80`, ver
+   `pfsense/README.md` sección 2) desde un dispositivo fuera de la red
+   del laboratorio para mostrar el acceso externo real.

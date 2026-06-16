@@ -137,8 +137,7 @@ jobs:
             --from-literal=LDAP_BIND_PASSWORD="${{ secrets.LDAP_BIND_PASSWORD }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      # 11) Deployments y Services de backend, frontend, mongo y
-      #     cloudflared (acceso externo vía Cloudflare Tunnel).
+      # 11) Deployments y Services de backend, frontend y mongo.
       - name: Aplicar deployments y services
         run: |
           kubectl apply -f infraestructura/kubernetes/deployments/
@@ -160,32 +159,16 @@ jobs:
           kubectl rollout status deployment/backend -n inventario --timeout=180s
           kubectl rollout status deployment/frontend -n inventario --timeout=180s
           kubectl rollout status deployment/mongo -n inventario --timeout=180s
-          kubectl rollout status deployment/cloudflared -n inventario --timeout=180s
 
-      # 14) Resumen final: URL de acceso LAN (NodePort), URL pública de
-      #     Cloudflare Tunnel y estado de los pods, útil para la demo.
-      #     La URL de Cloudflare tarda unos segundos en aparecer en los
-      #     logs de cloudflared tras el rollout, por eso se reintenta.
+      # 14) Resumen final: URL de acceso LAN (NodePort) y estado de los
+      #     pods, útil para la demo. El acceso externo (fuera de la red
+      #     del laboratorio) se resuelve aparte, vía el NAT port-forward
+      #     de pfSense + el port-forward VirtualBox en pfSense-Gateway
+      #     (ver pfsense/README.md sección 2), no requiere pasos del
+      #     workflow.
       - name: Estado del despliegue
         run: |
           echo "Frontend (LAN) disponible en: http://${MINIKUBE_IP}:30080"
-
-          echo "Buscando URL pública de Cloudflare Tunnel..."
-          CLOUDFLARE_URL=""
-          for i in $(seq 1 10); do
-            CLOUDFLARE_URL=$(kubectl logs -n inventario deploy/cloudflared --tail=100 2>/dev/null \
-              | grep -oE 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' | tail -n1 || true)
-            if [ -n "$CLOUDFLARE_URL" ]; then
-              break
-            fi
-            sleep 3
-          done
-
-          if [ -n "$CLOUDFLARE_URL" ]; then
-            echo "Frontend (internet) disponible en: $CLOUDFLARE_URL"
-          else
-            echo "No se pudo obtener todavía la URL de Cloudflare Tunnel."
-            echo "Revisar manualmente: kubectl logs -n inventario deploy/cloudflared"
-          fi
+          echo "Acceso externo: NAT port-forward de pfSense + port-forward VirtualBox (ver pfsense/README.md seccion 2)"
 
           kubectl get pods -n inventario -o wide
