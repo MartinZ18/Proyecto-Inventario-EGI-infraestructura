@@ -1,77 +1,50 @@
 -- =====================================================================
 --  configurar-usuarios-sql.sql
 --
---  Deja exactamente 2 logins de aplicacion en inventario_ubicaciones:
+--  Crea los 2 logins definitivos del proyecto en inventario_ubicaciones:
 --
 --    inventario_admin   todos los permisos (db_owner)
 --                       usado por el backend (FastAPI) para CRUD + DDL
 --    inventario_ro      solo lectura (db_datareader)
 --                       para consultas de auditoria o demos
 --
---  Tambien elimina el login anterior "inventarioapp" si existe.
---  Los logins de sistema (sa, NT AUTHORITY\SYSTEM, NT SERVICE\*,
---  ##MS_*##) NO se tocan.
+--  ORDEN DE EJECUCION SEGURO (no rompe el backend):
 --
---  Idempotente: se puede volver a correr sin error.
+--    PASO 1 — Ejecutar este script completo hasta "FIN DEL PASO 1".
+--             Crea inventario_admin e inventario_ro.
+--             El login anterior "inventarioapp" NO se toca en este paso,
+--             por lo que el backend sigue funcionando sin cambios.
 --
---  IMPORTANTE: si el backend usaba "inventarioapp", actualizar el
---  Secret de Kubernetes en LubuntuEGI y re-ejecutar el workflow:
+--    PASO 2 — Actualizar el GitHub Secret SQLSERVER_USER a "inventario_admin"
+--             y SQLSERVER_PASSWORD a "InvAdmin!2025" en el repo de GitHub.
+--             Luego volver a ejecutar el workflow de GitHub Actions para que
+--             recree el Secret de Kubernetes con las nuevas credenciales.
+--             Verificar que el backend sigue respondiendo correctamente.
 --
---    kubectl create secret generic backend-secret -n inventario \
---      --from-literal=SQLSERVER_USER="inventario_admin" \
---      --from-literal=SQLSERVER_PASSWORD="<password>" \
---      ... (resto de los campos igual) \
---      --dry-run=client -o yaml | kubectl apply -f -
+--    PASO 3 — Una vez confirmado que el backend funciona con inventario_admin,
+--             ejecutar la seccion "PASO 3" al final de este archivo para
+--             eliminar el login obsoleto "inventarioapp".
 --
---    kubectl rollout restart deployment/backend -n inventario
+--  Idempotente: cada paso se puede volver a correr sin error.
 --
---  Contrasenas de laboratorio (cambiar despues de la defensa si la VM
---  se reutiliza):
+--  Contrasenas de laboratorio (cambiar despues de la defensa):
 --    inventario_admin  InvAdmin!2025
 --    inventario_ro     InvReadOnly!2025
 -- =====================================================================
 
-USE master;
-GO
-
 -- =====================================================================
---  1. Eliminar el login anterior si existe
--- =====================================================================
-
--- Desconectar sesiones activas de inventarioapp antes de eliminar
-IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'inventarioapp')
-BEGIN
-    DECLARE @sql NVARCHAR(MAX) = N'';
-    SELECT @sql += N'KILL ' + CAST(session_id AS NVARCHAR(10)) + N';'
-    FROM sys.dm_exec_sessions
-    WHERE login_name = 'inventarioapp';
-    IF LEN(@sql) > 0 EXEC sp_executesql @sql;
-END
-GO
-
-IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'inventarioapp')
-BEGIN
-    USE inventario_ubicaciones;
-    IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'inventarioapp')
-        DROP USER inventarioapp;
-    USE master;
-    DROP LOGIN inventarioapp;
-    PRINT 'Login inventarioapp eliminado.';
-END
-ELSE
-    PRINT 'Login inventarioapp no existia (sin cambios).';
-GO
-
--- =====================================================================
---  2. Crear login inventario_admin  (todos los permisos — db_owner)
+--  PASO 1 — Crear los 2 logins nuevos (seguro, no toca inventarioapp)
 -- =====================================================================
 
 USE master;
 GO
+
+-- ---------- inventario_admin (db_owner — acceso total) ----------
+
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'inventario_admin')
 BEGIN
     CREATE LOGIN inventario_admin
-        WITH PASSWORD   = 'InvAdmin!2025',
+        WITH PASSWORD    = 'InvAdmin!2025',
              CHECK_POLICY = ON;
     PRINT 'Login inventario_admin creado.';
 END
@@ -88,9 +61,9 @@ BEGIN
 END
 GO
 
--- db_owner incluye datareader + datawriter + ddladmin + mas.
+-- db_owner incluye datareader + datawriter + ddladmin.
 -- SQLAlchemy (Base.metadata.create_all) necesita ddladmin al arrancar
--- el backend, por eso se otorga db_owner en lugar de permisos granulares.
+-- el pod del backend.
 IF (IS_ROLEMEMBER('db_owner', 'inventario_admin') = 0)
 BEGIN
     ALTER ROLE db_owner ADD MEMBER inventario_admin;
@@ -98,16 +71,14 @@ BEGIN
 END
 GO
 
--- =====================================================================
---  3. Crear login inventario_ro  (solo lectura — db_datareader)
--- =====================================================================
+-- ---------- inventario_ro (db_datareader — solo SELECT) ----------
 
 USE master;
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'inventario_ro')
 BEGIN
     CREATE LOGIN inventario_ro
-        WITH PASSWORD   = 'InvReadOnly!2025',
+        WITH PASSWORD    = 'InvReadOnly!2025',
              CHECK_POLICY = ON;
     PRINT 'Login inventario_ro creado.';
 END
@@ -131,17 +102,12 @@ BEGIN
 END
 GO
 
--- =====================================================================
---  4. Verificacion — mostrar logins de aplicacion activos
---     (excluye SA, NT AUTHORITY, NT SERVICE y los certificados internos)
--- =====================================================================
-
+-- Verificacion: mostrar logins de aplicacion actuales
 USE master;
 GO
 SELECT
     p.name         AS login,
     p.type_desc    AS tipo,
-    p.is_disabled  AS deshabilitado,
     dp.name        AS usuario_en_bd,
     STRING_AGG(r.name, ', ') WITHIN GROUP (ORDER BY r.name) AS roles
 FROM sys.server_principals p
@@ -151,17 +117,62 @@ LEFT JOIN inventario_ubicaciones.sys.database_role_members drm
     ON drm.member_principal_id = dp.principal_id
 LEFT JOIN inventario_ubicaciones.sys.database_principals r
     ON r.principal_id = drm.role_principal_id
-WHERE p.type IN ('S', 'U')   -- SQL login o Windows login
+WHERE p.type IN ('S', 'U')
   AND p.name NOT LIKE 'NT %'
   AND p.name NOT LIKE '##%'
   AND p.name <> 'sa'
-GROUP BY p.name, p.type_desc, p.is_disabled, dp.name
+GROUP BY p.name, p.type_desc, dp.name
 ORDER BY p.name;
 GO
 
 -- =====================================================================
+--  FIN DEL PASO 1
+--  Hacer el PASO 2 antes de continuar:
+--    1. Actualizar GitHub Secret SQLSERVER_USER = "inventario_admin"
+--    2. Actualizar GitHub Secret SQLSERVER_PASSWORD = "InvAdmin!2025"
+--    3. Re-ejecutar el workflow de GitHub Actions
+--    4. Verificar que el login desde el frontend sigue funcionando
+--  Una vez confirmado, ejecutar el PASO 3 a continuacion.
+-- =====================================================================
+
+
+-- =====================================================================
+--  PASO 3 — Eliminar el login obsoleto "inventarioapp"
+--           EJECUTAR SOLO DESPUES DE COMPLETAR EL PASO 2 Y VERIFICAR
+--           QUE EL BACKEND FUNCIONA CON inventario_admin
+-- =====================================================================
+
+/*   <-- descomenta quitando estos comentarios de bloque
+
+USE master;
+GO
+
+-- Desconectar sesiones activas de inventarioapp
+DECLARE @sql NVARCHAR(MAX) = N'';
+SELECT @sql += N'KILL ' + CAST(session_id AS NVARCHAR(10)) + N';'
+FROM sys.dm_exec_sessions
+WHERE login_name = 'inventarioapp';
+IF LEN(@sql) > 0 EXEC sp_executesql @sql;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'inventarioapp')
+BEGIN
+    USE inventario_ubicaciones;
+    IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'inventarioapp')
+        DROP USER inventarioapp;
+    USE master;
+    DROP LOGIN inventarioapp;
+    PRINT 'Login inventarioapp eliminado.';
+END
+ELSE
+    PRINT 'Login inventarioapp no existia.';
+GO
+
+*/   -- fin del bloque comentado
+
+-- =====================================================================
 --  FIN
---  Credenciales de aplicacion resultantes:
---    inventario_admin  InvAdmin!2025    (acceso total — usar en el backend)
---    inventario_ro     InvReadOnly!2025 (solo SELECT — demos/auditoria)
+--  Logins finales esperados en inventario_ubicaciones:
+--    inventario_admin  InvAdmin!2025    (db_owner — backend + acceso total)
+--    inventario_ro     InvReadOnly!2025 (db_datareader — solo SELECT)
 -- =====================================================================
