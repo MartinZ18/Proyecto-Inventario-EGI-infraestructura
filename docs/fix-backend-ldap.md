@@ -51,7 +51,46 @@ if admin_conn.entries:
 
 ---
 
-## Por qué
+---
+
+## Archivo 4: `app/repositories/equipo_repo.py`
+
+Agregar el import de `Persona` junto a los que ya están arriba del archivo:
+
+```python
+from app.models.inventario import Equipo, Ubicacion, Persona
+```
+
+Luego agregar la función `get_personas` después de `get_ubicaciones`:
+
+```python
+def get_personas(db: Session) -> List[Persona]:
+    return db.query(Persona).order_by(Persona.apellido).all()
+```
+
+---
+
+## Archivo 5: `app/routers/inventario.py`
+
+Agregar `PersonaOut` al import de schemas que ya existe en la línea que
+empieza con `from app.schemas.inventario import ...`:
+
+```python
+from app.schemas.inventario import EquipoCreate, EquipoUpdate, EquipoOut, UbicacionOut, PersonaOut
+```
+
+Luego agregar el endpoint después del bloque de `/ubicaciones`:
+
+```python
+@router.get("/personas", response_model=List[PersonaOut])
+def listar_personas(sql: Session = Depends(get_sql)):
+    """Lista las personas disponibles para asignar a un equipo."""
+    return inventario_service.equipo_repo.get_personas(sql)
+```
+
+---
+
+## Por qué (LDAP)
 
 El código actual hace el bind con `cn=admin,DC=itu,DC=local` y password
 `"admin"` — esa cuenta no existe en Active Directory. Además busca los
