@@ -61,7 +61,7 @@ Fecha de revisión: 2026-06-18.
 | Scripts de creación de BD + JSON de documentos | ✅ | `sql-server-iis/scripts/` + `database/scripts/inventario-db_mongo.js` |
 | Manifiestos de Kubernetes | ✅ | `kubernetes/` completo: deployments, services, configmaps, secrets, network-policies, namespace |
 | Ecosistema funcional en Minikube | ✅ | Verificado 2026-06-18: login OK, 12 equipos en listado, detalle completo, CRUD funcional |
-| Aplicación web gestión de inventario | ⚠️ Casi completa | CRUD ✅, filtros ✅, detalle ✅ — "Responsable asignado" en formulario no carga personas (falta endpoint `/personas/` en backend) |
+| Aplicación web gestión de inventario | ⚠️ Casi completa | CRUD ✅, filtros ✅, detalle ✅, campo mesa ✅ — "Responsable asignado" en formulario no carga personas (falta endpoint `/personas/` en backend) |
 | Presentación formato PowerPoint | ❌ Falta | No creada |
 
 ---
