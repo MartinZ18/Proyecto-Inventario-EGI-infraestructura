@@ -11,7 +11,7 @@ from pymongo.database import Database
 from app.schemas.computadora import ComputadoraCreate, ComputadoraUpdate
 
 # Nombre de la colección donde viven los documentos de componentes.
-COLLECTION = "componentes"
+COLLECTION = "computadoras"
 
 def _coll(db: Database):
     """Atajo interno: devuelve la colección de computadoras."""
