@@ -327,4 +327,4 @@ db.computadoras.insertMany([
   }
 ]);
 
-print('Documentos insertados: ' + db.componentes.countDocuments());
+print('Documentos insertados: ' + db.computadoras.countDocuments());
