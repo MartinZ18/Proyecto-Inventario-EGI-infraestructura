@@ -22,14 +22,3 @@ infra/_generated-pfsense/
 Logs/
 Snapshots/
 
-# Configuración local del IDE (no es parte del proyecto)
-.claude/
-
-# Referencia local de secretos (NUNCA commitear)
-infra/secretos.local.md
-
-# Notas de trabajo locales
-apuntes.txt
-PASOS-GIT-PUSH.md
-PROMPT-CLAUDE-WEB.md
-usuarios.txt
