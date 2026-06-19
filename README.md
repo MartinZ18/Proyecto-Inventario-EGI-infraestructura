@@ -103,7 +103,7 @@ reemplazarse:
 
 ## Mismatches conocidos (resueltos en este repo)
 
-Documentados también en el `CLAUDE.md` raíz del proyecto:
+Documentados también en la raíz del proyecto:
 
 | Mismatch | Resolución aplicada |
 |---|---|
