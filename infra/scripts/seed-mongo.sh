@@ -30,7 +30,7 @@ err() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; exit 1; }
 # ---- Verificaciones previas ---------------------------------
 [[ -f "$SEED_SCRIPT" ]] || err "No se encontró el seed en $SEED_SCRIPT
   Clonar el repo del backend primero:
-  git clone -b backend https://github.com/Agus-tina/Proyecto-Inventario-EGI.git ${HOME}/inventario/backend"
+  git clone -b backend https://github.com/MartinZ18/Proyecto-Inventario-EGI.git ${HOME}/inventario/backend"
 
 kubectl get pods -n inventario -l app=mongo --no-headers | grep -q Running \
   || err "El pod de mongo no está Running. Verificar: kubectl get pods -n inventario"

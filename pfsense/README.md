@@ -198,8 +198,8 @@ de la cuenta `pfsense_bind` en AD, ver
 > port-forward de pfSense (`WAN:80 -> ${MINIKUBE_IP}:30080`) combinado
 > con el port-forward a nivel VirtualBox (`host:80 -> WAN:80`, ver más
 > abajo) permite llegar al frontend desde fuera de la red Host-Only sin
-> depender de ningún servicio externo (se descartó Cloudflare Tunnel,
-> ver `docs/bitacora-despliegue.md`). El **NodePort `:30080`** directo
+> depender de ningún servicio externo (se descartó Cloudflare Tunnel
+> por requerir conectividad saliente que no está disponible en el lab). El **NodePort `:30080`** directo
 > sigue disponible para la LAN (ver `docs/topologia-red.md`).
 
 El frontend del Inventario está expuesto como `frontend-service`
@@ -343,7 +343,7 @@ puertos `40100`/`40200` de la PC — no configurado.
 
 > ℹ️ No forma parte del checklist obligatorio del runbook. La VM de SQL
 > Server ya tenía IIS instalado para otro propósito (no el SSRS evaluado
-> y descartado en Fase 2 — ver `docs/bitacora-despliegue.md`): dos
+> y descartado en Fase 2 por no ser requerido en el enunciado): dos
 > sitios, "Default Web Site" (binding catch-all `*:80:`) y "almacenes"
 > (binding por Host header `almacenes.itu.local`, `C:\inetpub\almacenes`).
 > Se necesita que "almacenes" sea alcanzable desde fuera de la red del
