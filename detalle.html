@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario ITU — Detalle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Link Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" 
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Link de iconos de Bootstrap -->
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-dark navbar-expand-md py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold fs-4">Inventario ITU</a>
+ 
+            <!-- Toggler para mobile -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+ 
+            <div class="collapse navbar-collapse justify-content-end" id="navMenu">
+                <ul class="navbar-nav align-items-md-center gap-md-2 mt-2 mt-md-0">
+                    <li class="nav-item">
+                        <a id="nomUsu" class="nav-link text-white">
+                            <i class="bi bi-person-circle p-1"></i>
+                            Nombre Usuario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a id="btnCerrarSesion" class="btn btn-outline-light fw-semibold cerrar-sesion">
+                            <img src="img/iconCerrarSesion.png" alt="Cerrar sesión" width="22" height="22" class="me-1">
+                            Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Detalle -->
+     <div class="container-fluid px-4 py-3">
+ 
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="listado.html" class="text-info p-2">Listado</a>
+                <li class="breadcrumb-item"><a href="listado.html" class="text-info">Listado Máquinas</a>
+                <li class="breadcrumb-item active text-white" id="breadcrumbDetalle">
+                    Detalle máquina #101</li>
+            </ol>
+        </nav>
+ 
+        <!-- CARD UBICACIÓN (datos desde SQL Server) -->
+        <div class="card bg-secondary-dark border border-secondary rounded-3 mb-3 p-4">
+            <h5 class="fw-bold mb-1">Ubicación</h5>
+            <hr class="border-secondary mt-2 mb-3">
+            <div class="row g-3">
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Ubicación</p>
+                    <p class="fw-bold" id="detUbicacion">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Tipo de ubicación</p>
+                    <p class="fw-bold" id="detTipoUbicacion">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Edificio</p>
+                    <p class="fw-bold" id="detEdificio">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Piso</p>
+                    <p class="fw-bold" id="detPiso">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Mesa</p>
+                    <p class="fw-bold" id="detMesa">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Responsable asignado</p>
+                    <p class="fw-bold" id="detResponsable">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Último mantenimiento</p>
+                    <p class="fw-bold" id="detMantenimiento">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Estado del equipo</p>
+                    <p class="fw-bold" id="detEstado">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Fecha de alta</p>
+                    <p class="fw-bold" id="detFechaAlta">—</p>
+                </div>
+            </div>
+        </div>
+ 
+        <!-- CARD HARDWARE (datos desde MongoDB) -->
+        <div class="card bg-secondary-dark border border-secondary rounded-3 mb-3 p-4">
+            <h5 class="fw-bold mb-1">
+                Hardware
+            </h5>
+            <hr class="border-secondary mt-2 mb-3">
+            <div class="row g-3">
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Tipo</p>
+                    <p class="fw-bold" id="detTipo">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Código de inventario</p>
+                    <p class="fw-bold" id="detCodigo">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Fabricante</p>
+                    <p class="fw-bold" id="detFabricante">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Modelo</p>
+                    <p class="fw-bold" id="detModelo">—</p>
+                </div>
+            </div>
+ 
+            <!-- Sistema Operativo -->
+            <hr class="border-secondary my-3">
+            <p class="fw-semibold small mb-4">Sistema Operativo</p>
+            <div class="row g-3">
+                <div class="col-4">
+                    <p class="text-muted small mb-0">Nombre</p>
+                    <p class="fw-bold" id="detSoNombre">—</p>
+                </div>
+                <div class="col-4">
+                    <p class="text-muted small mb-0">Versión</p>
+                    <p class="fw-bold" id="detSoVersion">—</p>
+                </div>
+                <div class="col-4">
+                    <p class="text-muted small mb-0">Arquitectura</p>
+                    <p class="fw-bold" id="detSoArq">—</p>
+                </div>
+            </div>
+ 
+            <!-- CPU -->
+            <hr class="border-secondary my-3">
+            <p class="fw-semibold small mb-4">CPU</p>
+            <div class="row g-3">
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Fabricante</p>
+                    <p class="fw-bold" id="detCpuFab">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Modelo</p>
+                    <p class="fw-bold" id="detCpuMod">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Núcleos</p>
+                    <p class="fw-bold" id="detCpuNuc">—</p>
+                </div>
+                <div class="col-6">
+                    <p class="text-muted small mb-0">Frecuencia</p>
+                    <p class="fw-bold" id="detCpuFrec">—</p>
+                </div>
+            </div>
+ 
+            <!-- RAM -->
+            <hr class="border-secondary my-3">
+            <p class="fw-semibold small mb-4">RAM</p>
+            <div id="detRam" class="row g-3"><!-- se llena con JS --></div>
+ 
+            <!-- Almacenamiento -->
+            <hr class="border-secondary my-3">
+            <p class="fw-semibold small mb-4">Almacenamiento</p>
+            <div id="detAlmacenamiento" class="row g-3"><!-- se llena con JS --></div>
+ 
+            <!-- ── SOLO DESKTOP: Periféricos ── -->
+            <div id="seccionDesktop" class="d-none">
+                <hr class="border-secondary my-3">
+                <p class="text-muted small mb-3">Periféricos</p>
+                <div class="d-flex gap-4 flex-wrap">
+                    <div>
+                        <p class="text-muted small mb-0">Monitor</p>
+                        <p class="fw-bold" id="detMonitor">—</p>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-0">Teclado</p>
+                        <p class="fw-bold" id="detTeclado">—</p>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-0">Mouse</p>
+                        <p class="fw-bold" id="detMouse">—</p>
+                    </div>
+                </div>
+            </div>
+ 
+            <!-- ── SOLO LAPTOP: Batería y pantalla ── -->
+            <div id="seccionLaptop" class="d-none">
+                <hr class="border-secondary my-3">
+                <p class="text-muted small mb-4">Batería</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <p class="text-muted small mb-0">Capacidad</p>
+                        <p class="fw-bold" id="detBatEstado">—</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="text-muted small mb-0">Ciclos</p>
+                        <p class="fw-bold" id="detBatCiclos">—</p>
+                    </div>
+                </div>
+                <hr class="border-secondary my-3">
+                <p class="text-muted small mb-4">Pantalla integrada</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <p class="text-muted small mb-0">Pulgadas</p>
+                        <p class="fw-bold" id="detPantPulgadas">—</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="text-muted small mb-0">Resolución</p>
+                        <p class="fw-bold" id="detPantRes">—</p>
+                    </div>
+                </div>
+            </div>
+ 
+        </div>
+ 
+        <!-- BOTONES -->
+        <div class="d-flex justify-content-between mt-3 mb-5">
+            <a href="listado.html" class="btn btn-volverListado px-4 fw-semibold">
+                Volver al listado
+            </a>
+            <div class="d-flex gap-2">
+                <a href="formulario.html" class="btn btn-primary px-4 fw-semibold" id="btnEditar">
+                    Editar
+                </a>
+                <button class="btn btn-danger px-4 fw-semibold" id="btnEliminar">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+ 
+    </div>
+ 
+    <!-- MODAL CONFIRMACIÓN ELIMINAR -->
+    <div class="modal fade" id="modalEliminar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border border-secondary text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-danger">Eliminar equipo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro que querés eliminar este equipo? Esta acción no se puede deshacer.
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Sí, eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script type="module" src="js/detalle.js"></script>
+</body>
+</html>

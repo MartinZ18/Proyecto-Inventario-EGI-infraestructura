@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario ITU — Ingresar</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Link de Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" 
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Link de iconos de Bootstrap -->
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    
+<div class="container-fluid h-100">
+  <div class="row h-100">
+ 
+    <!-- Panel izquierdo: logo -->
+    <div class="col-md-6 d-none d-md-flex panel-izquierdo align-items-center justify-content-center">
+        <img src="img/logoItu.jpg" class="img-fluid" alt="Logo ITU" style="max-width:350px" />
+    </div>
+ 
+    <!-- Panel derecho: formulario -->
+    <div class="col-md-6 d-flex align-items-center justify-content-center bg-white">
+      <div class="w-100 px-5" style="max-width:600px">
+ 
+        <h1 class="fw-bold mb-1">Inventario ITU</h1>
+        <p class="text-muted mb-4">Ingresa con tus credenciales institucionales</p>
+ 
+        <!-- Alerta 401: credenciales incorrectas -->
+        <div id="alertError" class="alert alert-danger d-none" role="alert">
+          <strong>Error al ingresar</strong><br>
+          Usuario o contraseña incorrectos. Revisá tus credenciales institucionales.
+        </div>
+
+        <div id="mensVacios" class="alert alert-danger d-none" role="alert"></div>
+ 
+        <!-- Alerta red/servidor -->
+        <div id="alertRed" class="alert alert-danger d-none" role="alert">
+          <strong>Sin conexión</strong><br>
+          No se pudo conectar con el servidor. Verificá que estés en la red del ITU.
+        </div>
+ 
+        <!-- Usuario -->
+        <div class="mb-3">
+          <label for="usuario" class="form-label fw-semibold">Usuario</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" id="usuario" class="form-control" placeholder="Ingrese su usuario" autocomplete="username" />
+          </div>
+        </div>
+ 
+        <!-- Contraseña -->
+        <div class="mb-3">
+          <label for="password" class="form-label fw-semibold">Contraseña</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" id="password" class="form-control" placeholder="Ingrese su contraseña" autocomplete="current-password" />
+            <button class="btn btn-outline-secondary toggle-pw" type="button" id="togglePw">
+              <i class="bi bi-eye-slash" id="toggleIcon"></i>
+            </button>
+          </div>
+        </div>
+ 
+        <!--
+        <div class="form-check mb-4">
+          <input class="form-check-input border-dark" type="checkbox" id="recordar" />
+          <label class="form-check-label" for="recordar">Recordármelo</label>
+        </div> -->
+ 
+        <button id="btnIngresar" type="button" class="btn btn-primary w-100 fw-semibold py-2">INGRESAR</button>
+ 
+      </div>
+    </div>
+ 
+  </div>
+</div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script type="module" src="js/login.js"></script>
+  </body>
+</html>
