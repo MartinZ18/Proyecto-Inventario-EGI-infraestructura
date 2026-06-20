@@ -44,10 +44,14 @@
     </nav>
 
     <!-- FILTRO + BOTÓN NUEVA MÁQUINA -->
-    <div class="container-fluid px-4 mt-4">
+    <div class="container-fluid px-4 mt-4" role="main">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
- 
-            <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <h1 id="tituloListado" class="page-title mb-1">Listado de máquinas</h1>
+                <p class="text-muted small mb-2">Usá los filtros para acotar resultados rápidamente.</p>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 flex-wrap filters" aria-hidden="false">
                 <h5 class="mb-0 fw-semibold text-muted">Filtrar por:</h5>
  
                 <!-- Filtro tipo de ubicación -->
@@ -82,8 +86,8 @@
         </div>
  
         <!-- TABLA -->
-        <div class="table-responsive">
-            <table class="table table-hover align-middle text-center table-bordered border-dark">
+        <div class="table-responsive" role="region" aria-labelledby="tituloListado">
+            <table class="table table-hover align-middle text-center table-bordered border-dark" role="table" aria-label="Listado de máquinas">
                 <thead class="table-dark">
                     <tr class="text-muted small">
                         <th class="fw-normal py-3 text-center">ID</th>
@@ -103,7 +107,17 @@
  
         <!-- Sin resultados de máquinas -->
         <div id="sinResultados" class="text-center py-5 d-none">
-            <p class="text-muted fs-5">No hay máquinas registradas.</p>
+            <div class="empty-card">
+                <div class="d-flex align-items-center gap-4">
+                    <div>
+                        <h4 class="mb-1">No hay máquinas registradas</h4>
+                        <p class="text-muted mb-0">Podés crear una nueva máquina para empezar a generar inventario.</p>
+                    </div>
+                    <div class="ms-auto">
+                        <a href="formulario.html" class="btn btn-primary">Nueva máquina</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
