@@ -2,7 +2,7 @@
 Punto de entrada de la aplicación FastAPI.
 
 Acá se crea la app, se registran los routers y se exponen un par de endpoints
-básicos de control. Es el archivo que ejecuta uvicorn para levantar el back.
+básicos de control. Es el archivo que ejecuta uvicorn para iniciar el servidor.
 """
 
 from fastapi import FastAPI

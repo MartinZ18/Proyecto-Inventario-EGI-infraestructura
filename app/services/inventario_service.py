@@ -1,7 +1,7 @@
 """
 Servicio de INVENTARIO: el núcleo del sistema.
 
-Orquesta las dos bases de datos para resolver el flujo del enunciado:
+Orquesta las dos bases de datos para construir la vista unificada de cada equipo:
   1. Consulta SQL Server por el EQUIPO (con su ubicación, asignaciones y
      mantenimientos) usando el id_equipo.
   2. Con ese mismo id_equipo consulta MongoDB por los COMPONENTES de hardware.

@@ -5,8 +5,8 @@
 #   - MongoDB    (componentes)
 #   - LDAP       (autenticación)
 #
-# Esto es SOLO para que puedas probar tu back localmente antes de
-# pasar a Kubernetes. Las contraseñas acá son de desarrollo.
+# Solo para desarrollo local, antes de pasar a Kubernetes.
+# Las contraseñas son de ejemplo; cambiarlas antes de desplegar.
 #
 # Uso:
 #   docker compose up -d      -> levanta todo en segundo plano

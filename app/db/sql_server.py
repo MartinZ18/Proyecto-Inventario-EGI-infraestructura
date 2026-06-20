@@ -19,7 +19,7 @@ from app.core.config import settings
 engine = create_engine(
     settings.sqlserver_url,
     pool_pre_ping=True,
-    echo=settings.debug,  # en modo debug imprime el SQL que ejecuta (útil para defender)
+    echo=settings.debug,  # en modo debug imprime el SQL que ejecuta (útil para depurar)
 )
 
 # Fábrica de sesiones. Cada request abrirá una y la cerrará al terminar.

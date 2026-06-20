@@ -2,7 +2,7 @@
 Repositorio de COMPONENTES (MongoDB).
 
 Aísla todo el acceso a MongoDB, igual que equipo_repo.py aísla SQL Server. A diferencia de aquel, acá NO hay ORM: se trabaja directo con la 
-colección y documentos JSON. Implementa las operaciones que pide la consigna sobre Mongo: crear colección, insertar, buscar filtrado, actualizar y eliminar.
+colección y documentos JSON. Implementa las operaciones CRUD sobre la colección: insertar, buscar filtrado, actualizar y eliminar.
 El id_equipo es el puente con SQL Server: con él se localizan los componentes del equipo cuyos datos de ubicación viven en la base relacional.
 """
 
