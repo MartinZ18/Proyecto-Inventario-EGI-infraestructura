@@ -45,27 +45,12 @@ jobs:
     runs-on: [self-hosted, minikube]
 
     steps:
-      # 1) Checkout de este repo: trae kubernetes/, docker/frontend/, etc.
-      - name: Checkout infraestructura
+      # 1) Checkout de este repo: trae todo — kubernetes/, docker/frontend/,
+      #    backend/, frontend/, bases-de-datos/, infra/, etc.
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
           path: infraestructura
-
-      # 2) Checkout del código del backend (rama "backend" de este mismo repo).
-      - name: Checkout backend
-        uses: actions/checkout@v4
-        with:
-          repository: MartinZ18/Proyecto-Inventario-EGI-infraestructura
-          ref: backend
-          path: backend
-
-      # 3) Checkout del código del frontend (rama "frontend" de este mismo repo).
-      - name: Checkout frontend
-        uses: actions/checkout@v4
-        with:
-          repository: MartinZ18/Proyecto-Inventario-EGI-infraestructura
-          ref: frontend
-          path: frontend
 
       # 4) Resolver la configuración de red del laboratorio: carga
       #    infra/red.local.env (o infra/red.example.env con un aviso si
@@ -97,15 +82,15 @@ jobs:
 
       # 7) Build de la imagen del backend (FastAPI + ODBC Driver 18).
       - name: Build imagen backend (inventario-api)
-        run: docker build -t inventario-api:latest ./backend
+        run: docker build -t inventario-api:latest ./infraestructura/backend
 
       # 8) Build de la imagen del frontend, usando el Dockerfile/nginx.conf
-      #    de este repo de infraestructura sobre el checkout del frontend.
+      #    del mismo repo (docker/frontend/) sobre el código en frontend/.
       - name: Build imagen frontend (inventario-web)
         run: |
-          cp infraestructura/docker/frontend/nginx.conf frontend/
-          cp infraestructura/docker/frontend/.dockerignore frontend/
-          docker build -f infraestructura/docker/frontend/Dockerfile -t inventario-web:latest frontend/
+          cp infraestructura/docker/frontend/nginx.conf infraestructura/frontend/
+          cp infraestructura/docker/frontend/.dockerignore infraestructura/frontend/
+          docker build -f infraestructura/docker/frontend/Dockerfile -t inventario-web:latest infraestructura/frontend/
 
       # 9) Namespace, configuración no sensible y endpoints externos
       #    (SQL Server / AD fuera del clúster). Los endpoints externos se
@@ -167,7 +152,7 @@ jobs:
       #     tocar nada. Lee las credenciales del Secret de Kubernetes, no
       #     hace falta hardcodear nada aquí.
       - name: Seed MongoDB (idempotente)
-        run: bash infraestructura/infra/scripts/seed-mongo.sh --backend-repo=./backend
+        run: bash infraestructura/infra/scripts/seed-mongo.sh --backend-repo=./infraestructura/backend
 
       # 15) Resumen final: URL de acceso LAN (NodePort) y estado de los
       #     pods, útil para la demo. El acceso externo (fuera de la red

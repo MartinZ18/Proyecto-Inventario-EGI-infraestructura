@@ -1,114 +1,174 @@
-# Proyecto Inventario EGI — Repo Principal
+# Proyecto Integrador EGI — Sistema de Inventario ITU
 
-**Repositorio central del Proyecto Integrador EGI (ITU)** — sistema de inventario
-de equipos de laboratorio. Acá vive todo: infra, seguridad, CI/CD y el código de
-cada capa subido por el equipo.
+Sistema de inventario de equipos de laboratorio para la Universidad Tecnológica
+(ITU). Trabajo integrador grupal con defensa oral.
 
-## Ramas por capa
+## Equipo y responsabilidades
 
-| Rama | Responsable | Contenido |
-|---|---|---|
-| `main` | Martin (Seguridad y Redes) | Infra, Kubernetes, CI/CD, pfSense, AD, iptables |
-| `backend` | (Backend) | FastAPI + Python — código de la API |
-| `frontend` | (Frontend) | HTML/JS/Bootstrap — interfaz web |
-| `bases-de-datos` | (Bases de datos) | Scripts SQL Server + MongoDB |
+| Integrante | Capa |
+|---|---|
+| Backend | FastAPI + Python — API REST |
+| Frontend | HTML/JS/Bootstrap — interfaz web |
+| Bases de datos | SQL Server 2022 + MongoDB 7 — modelos y scripts |
+| Seguridad y Redes | Kubernetes, NetworkPolicies, Active Directory, pfSense, CI/CD |
 
-El pipeline de CI/CD (`.github/workflows/deploy.yml`) toma el código de las ramas
-`backend` y `frontend` de este mismo repo, lo buildea y lo despliega en Minikube
-en la VM **LinuxEGI** de la facultad.
+## Stack
 
----
-
-## Empezar acá
-
-- 📐 **`docs/arquitectura.md`** — visión general del sistema, diagrama
-  de componentes (Mermaid), flujo de autenticación y modelo de
-  seguridad en capas.
-- 🌐 **`docs/topologia-red.md`** — diagrama de red, esquema de
-  configuración de red dinámica, matriz de puertos/protocolos y
-  detalle de las 7 NetworkPolicies zero-trust (00-06).
-- 🚀 **`docs/runbook-despliegue.md`** — orden de despliegue end-to-end
-  (Fase 0: red local → AD → SQL Server → pfSense → Minikube/Calico
-  → Kubernetes → GitHub Actions), con comandos y checklists por fase.
-- 🔧 **`infra/red.example.env`** — plantilla de configuración de red
-  del laboratorio (copiar a `infra/red.local.env`, gitignored, antes de
-  desplegar).
-
----
+| Capa | Tecnología |
+|---|---|
+| API | Python 3.12 + FastAPI + SQLAlchemy |
+| Frontend | HTML + CSS + JS vanilla + Bootstrap 5 |
+| Base relacional | SQL Server 2022 (`inventario_ubicaciones`) |
+| Base documental | MongoDB 7 (`inventario_componentes.computadoras`) |
+| Autenticación | LDAP → Active Directory (`itu.local`) + JWT (HS256) |
+| Orquestación | Minikube + Calico CNI (NetworkPolicies) |
+| CI/CD | GitHub Actions — self-hosted runner en LinuxEGI |
+| Gateway | pfSense — NAT, DHCP relay, autenticación AD |
 
 ## Estructura del repositorio
 
 ```
 .
-├── docs/                    Documentación (arquitectura, topología, runbook)
-├── infra/                   Configuración de red dinámica
-│   ├── red.example.env      Plantilla (commiteada) -> copiar a red.local.env
-│   └── scripts/              detectar-red.*, generar-manifiestos.*
-├── docker/frontend/         Dockerfile + nginx.conf del frontend
+├── backend/                 FastAPI — código de la API
+│   ├── app/                 Aplicación (routers, services, repos, models, schemas)
+│   ├── scripts-dev/         Seeds SQL/Mongo/LDAP para desarrollo local
+│   ├── Dockerfile
+│   ├── docker-compose.yml   SQL Server + MongoDB + OpenLDAP (dev local)
+│   ├── requirements.txt
+│   └── .env.example
+│
+├── frontend/                Interfaz web — HTML/JS vanilla + Bootstrap 5
+│   ├── index.html           Login
+│   ├── listado.html         Tabla de equipos
+│   ├── detalle.html         Detalle completo de un equipo
+│   ├── formulario.html      Alta / edición (solo Técnicos)
+│   ├── js/                  api.js, login.js, listado.js, detalle.js, formulario.js
+│   └── css/ img/
+│
+├── bases-de-datos/          Scripts de base de datos
+│   └── database/scripts/
+│       ├── Script SQL Server 2022.sql   Crea ubicacion_db con 5 tablas + seed
+│       └── inventario-db_mongo.js       Crea inventario_db.componentes + seed
+│
 ├── kubernetes/              Manifiestos del namespace "inventario"
 │   ├── 00-namespace.yaml
-│   ├── configmaps/          Configuración no sensible del backend
-│   ├── secrets/             Plantilla de Secret (no se commitean valores reales)
+│   ├── configmaps/
 │   ├── deployments/         backend, frontend, mongo
-│   ├── services/            ClusterIP/NodePort
-│   ├── external/            Endpoints hacia SQL Server y AD (placeholders ${VAR})
-│   ├── network-policies/    7 políticas zero-trust (00-06)
-│   └── _generated/          (gitignored) manifiestos con ${VAR} ya resueltos
-├── .github/workflows/       Pipeline de despliegue (deploy.yml)
-├── pfsense/                 Runbook + automatización (SSH/pfSsh.php)
-│   └── scripts/              nat-port-forward.php, auth-server-ad.php,
-│                              dhcp-relay.php, aplicar-config-pfsense.ps1
-├── active-directory/        Runbook + script de creación de OUs/grupos/usuarios
-├── sql-server-iis/          Runbook + script de firewall para SQL Server 2022
-└── iptables/                Reglas de firewall del host de Minikube
+│   ├── services/
+│   ├── external/            Endpoints hacia SQL Server y AD (VMs, no pods)
+│   └── network-policies/    7 políticas zero-trust (00-06)
+│
+├── active-directory/        Scripts PowerShell — OUs, grupos, usuarios AD
+├── pfsense/                 Runbook + scripts PHP para configurar pfSense
+├── sql-server-iis/          Runbook + scripts de firewall para SQL Server
+├── iptables/                Reglas de firewall del host LinuxEGI (Minikube)
+├── docker/frontend/         Dockerfile + nginx.conf para el frontend en K8s
+│
+├── infra/                   Configuración de red dinámica
+│   ├── red.example.env      Plantilla (committear) — copiar a red.local.env
+│   └── scripts/             detectar-red.*, generar-manifiestos.*, seed-mongo.sh
+│
+├── docs/                    Documentación técnica
+│   ├── arquitectura.md      Diagrama de componentes, flujo de autenticación
+│   ├── topologia-red.md     Diagrama de red, 7 NetworkPolicies, matriz de puertos
+│   └── runbook-despliegue.md Orden end-to-end de despliegue (Fases 0-5)
+│
+└── .github/workflows/
+    └── deploy.yml           Pipeline CI/CD — build + deploy en Minikube
 ```
 
----
+## Arranque local (desarrollo)
 
-## Configuración de red (dinámica)
+```bash
+# 1. Levantar SQL Server, MongoDB y OpenLDAP con Docker
+cd backend
+docker compose up -d
 
-Las IPs del laboratorio (pfSense, AD, SQL Server, Minikube) **no están
-hardcodeadas**: se resuelven al desplegar a partir de
-`infra/red.example.env` (plantilla commiteada, defaults de la red
-Host-Only `192.168.56.0/24` recomendada en `pfsense/README.md`) →
-`infra/red.local.env` (copia local, gitignored, una por máquina) →
-`infra/scripts/detectar-red.*` (carga esos valores — `MINIKUBE_IP` es
-la IP estática del host Minikube — y opcionalmente resuelve
-`SQLSERVER_IP` por DNS) →
-`infra/scripts/generar-manifiestos.*` (sustituye los placeholders
-`${VAR}` y genera `kubernetes/_generated/`, gitignored). Tabla completa
-de variables en `docs/topologia-red.md`; pasos en
-`docs/runbook-despliegue.md` (Fase 0).
+# 2. Entorno Python
+python -m venv venv
+venv\Scripts\activate        # Windows
+pip install -r requirements.txt
 
----
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env: SQLSERVER_DB=inventario_ubicaciones
 
-## Acceso externo
+# 4. Seed inicial
+# SQL Server: ejecutar bases-de-datos/database/scripts/Script SQL Server 2022.sql
+#             o scripts-dev/ubicaciones_prueba.sql para dev rápido
+# MongoDB:    mongosh < scripts-dev/componentes_prueba.js
 
-El frontend queda disponible por dos vías que conviven sin
-reemplazarse:
+# 5. Levantar la API
+uvicorn app.main:app --reload --port 8000
+# Swagger UI: http://localhost:8000/docs
 
-- **LAN (NodePort `:30080`)**: cualquier equipo en la red del
-  laboratorio puede abrir `http://${MINIKUBE_IP}:30080` directamente, o
-  vía el port-forward de pfSense (`pfsense/README.md`, sección 2).
-- **Fuera de la red del laboratorio (NAT port-forward)**: pfSense
-  reenvía `WAN:80 -> ${MINIKUBE_IP}:30080`
-  (`pfsense/scripts/nat-port-forward.php`, requiere
-  `wan-allow-private.php` aplicado primero) y, para llegar desde fuera
-  de la red Host-Only, un port-forward a nivel VirtualBox en la VM
-  `pfSense-Gateway` (`host:80 -> WAN:80`, mismo patrón que los de
-  RDP/IIS). No depende de ningún servicio externo. Ver
-  `pfsense/README.md` sección 2 para los comandos.
+# 6. Frontend
+# Abrir frontend/index.html directamente en el navegador
+```
 
----
+## Despliegue en Kubernetes
 
-## Mismatches conocidos (resueltos en este repo)
+Ver [`docs/runbook-despliegue.md`](docs/runbook-despliegue.md) para el procedimiento
+completo (Fases 0-5). Resumen:
 
-Documentados también en la raíz del proyecto:
+```bash
+# Copiar plantilla de red y completar con las IPs del laboratorio
+cp infra/red.example.env infra/red.local.env
 
-| Mismatch | Resolución aplicada |
+# Generar manifiestos con las IPs resueltas
+bash infra/scripts/detectar-red.sh
+bash infra/scripts/generar-manifiestos.sh
+
+# Aplicar al clúster (o usar el pipeline CI/CD desde GitHub Actions)
+kubectl apply -f kubernetes/00-namespace.yaml
+kubectl apply -f kubernetes/configmaps/
+kubectl apply -f kubernetes/_generated/external/
+kubectl apply -f kubernetes/deployments/
+kubectl apply -f kubernetes/services/
+kubectl apply -f kubernetes/_generated/network-policies/
+```
+
+El pipeline `deploy.yml` automatiza todo esto. Requiere un self-hosted runner
+con la etiqueta `minikube` instalado en LinuxEGI y los GitHub Secrets configurados
+(`JWT_SECRET`, `SQLSERVER_USER`, `SQLSERVER_PASSWORD`, `MONGO_ROOT_USER`,
+`MONGO_ROOT_PASSWORD`, `LDAP_BIND_PASSWORD`).
+
+## Endpoints de la API
+
+| Método | Ruta | Acceso |
+|---|---|---|
+| POST | `/auth/login` | público |
+| GET | `/inventario/` | autenticado |
+| GET | `/inventario/{id}` | autenticado |
+| GET | `/inventario/ubicaciones` | autenticado |
+| POST | `/inventario/equipos` | solo Técnicos |
+| PUT | `/inventario/equipos/{id}` | solo Técnicos |
+| DELETE | `/inventario/equipos/{id}` | solo Técnicos |
+| POST | `/inventario/componentes` | solo Técnicos |
+| PUT | `/inventario/componentes/{id}` | solo Técnicos |
+| DELETE | `/inventario/componentes/{id}` | solo Técnicos |
+| GET | `/health` | público (health check K8s) |
+
+## Seguridad — NetworkPolicies zero-trust
+
+7 políticas aplicadas en el namespace `inventario`:
+
+| Archivo | Efecto |
 |---|---|
-| SQL Server: script crea `ubicacion_db`, backend espera `inventario_ubicaciones` | `sql-server-iis/README.md` — renombrar/crear la base como `inventario_ubicaciones` |
-| MongoDB: el seed de `bases-de-datos` crea `inventario_db.componentes`, backend espera `inventario_componentes.computadoras` | `kubernetes/deployments/mongo-deployment.yaml` — usar en su lugar el seed correcto `Proyecto-Inventario-EGI-backend/scripts-dev/componentes_prueba.js` (ya usa `inventario_componentes`/`computadoras`) |
-| Mongo puerto 27018 (docker-compose local) vs 27017 | `kubernetes/configmaps/backend-configmap.yaml` usa `MONGO_PORT=27017` (puerto del Service en K8s) |
-| LDAP del backend (OpenLDAP, `dc=itu,dc=edu,dc=ar`) vs AD real (`itu.local`) | `active-directory/README.md` — `LDAP_BASE_DN`/`LDAP_USER_DN_TEMPLATE` actualizados para AD |
-| `obtener_rol()` usa un bind admin hardcodeado (`cn=admin`/`admin`, solo dev) | `active-directory/README.md` sección 4 — requiere cambio coordinado en el backend (cuenta `svc-inventario`) |
+| `00-default-deny.yaml` | Deniega todo el tráfico por defecto |
+| `01-allow-dns.yaml` | Permite egress DNS → kube-dns |
+| `02-allow-frontend-ingress.yaml` | Permite ingress :80 al frontend |
+| `03-allow-frontend-egress.yaml` | Permite egress del frontend → API :8000 |
+| `04-allow-backend-from-frontend.yaml` | Permite ingress :8000 al backend solo desde frontend |
+| `05-allow-backend-egress.yaml` | Permite egress del backend → MongoDB (pod) + SQL Server/AD (ipBlock) |
+| `06-allow-mongodb-from-backend.yaml` | Permite ingress :27017 a MongoDB solo desde backend |
+
+## Usuarios de prueba (Active Directory)
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `mgomez` | `Inventario!2025` | Técnico (CRUD completo) |
+| `clopez` | `Inventario!2025` | Técnico (CRUD completo) |
+| `jperez` | `Inventario!2025` | Docente (solo lectura) |
+| `agarcia` | `Inventario!2025` | Docente (solo lectura) |
+| `psanchez` | `Inventario!2025` | Alumno (solo lectura) |

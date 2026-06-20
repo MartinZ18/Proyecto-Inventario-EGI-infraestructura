@@ -1,0 +1,18 @@
+dn: ou=grupos,dc=itu,dc=edu,dc=ar
+objectClass: organizationalUnit
+ou: grupos
+
+dn: cn=Tecnicos,ou=grupos,dc=itu,dc=edu,dc=ar
+objectClass: groupOfNames
+cn: Tecnicos
+member: uid=jperez,ou=usuarios,dc=itu,dc=edu,dc=ar
+
+dn: cn=Docentes,ou=grupos,dc=itu,dc=edu,dc=ar
+objectClass: groupOfNames
+cn: Docentes
+member: uid=mdocente,ou=usuarios,dc=itu,dc=edu,dc=ar
+
+dn: cn=Alumnos,ou=grupos,dc=itu,dc=edu,dc=ar
+objectClass: groupOfNames
+cn: Alumnos
+member: uid=aalumno,ou=usuarios,dc=itu,dc=edu,dc=ar
