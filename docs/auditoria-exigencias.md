@@ -56,8 +56,10 @@ Ecosistema de Inventario Seguro".
 | Documentación del proyecto | ✅ | `docs/arquitectura.md`, `docs/topologia-red.md`, `docs/runbook-despliegue.md` |
 | Esquema de arquitectura (servicios, puertos, reglas de red) | ✅ | `docs/arquitectura.md` — diagrama Mermaid + flujo de autenticación + matriz de puertos en `docs/topologia-red.md` |
 | Esquema de BD (diseño previo + scripts + JSON) | ✅ | Scripts en `bases-de-datos/database/scripts/`; diagramas E-R y NoSQL en `bases-de-datos/database/diagramas/` |
+| Flujograma de la aplicación web | ✅ | `docs/flujo-aplicacion.md` — diagrama Mermaid de navegación, roles, permisos y flujo de datos por operación |
 | Repositorio Git con todo el código | ✅ | Monorepo `MartinZ18/Proyecto-Inventario-EGI`: `backend/`, `frontend/`, `bases-de-datos/`, infra |
 | Scripts de creación de BD + documentos JSON | ✅ | `bases-de-datos/database/scripts/Script SQL Server 2022.sql` + `inventario-db_mongo.js` |
 | Manifiestos de Kubernetes | ✅ | `kubernetes/`: deployments, services, configmaps, secrets, network-policies, namespace |
 | Ecosistema funcional en Minikube | ✅ | Login AD funcional, 12 equipos en listado, detalle completo SQL+Mongo, CRUD operativo |
 | Aplicación web de gestión de inventario | ✅ | CRUD completo, filtros por tipo y ubicación, detalle por equipo, campo mesa |
+| Presentación formato PowerPoint | ⚠️ | Entregable separado — no se versiona en el repo |
