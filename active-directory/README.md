@@ -231,5 +231,4 @@ credenciales **y** devuelve el rol `Tecnicos`, habilitando
       otra máquina apuntando a `192.168.56.10:389`, default `DC_IP`).
 - [x] Cambios de `obtener_rol()` (sección 4) incorporados al código del
       backend (bind administrativo `LDAP_BIND_DN`/`LDAP_BIND_PASSWORD` +
-      resolución de rol vía `memberOf`). Pendiente: rebuild/redeploy de
-      la imagen en Minikube y reverificar login de `mgomez`.
+      resolución de rol vía `memberOf`).

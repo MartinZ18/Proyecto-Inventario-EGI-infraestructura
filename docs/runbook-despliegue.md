@@ -24,11 +24,6 @@ antes de pasar a la siguiente fase.
 | 4 — Minikube + Calico | ✅ Completa |
 | 5 — Kubernetes (apps + NetworkPolicies) | ✅ Completa |
 | 6 — GitHub Actions (CI/CD) | ✅ Completa |
-| 7 — Migración al repo principal | ⏳ Pendiente |
-
-📄 Detalle de lo hecho en cada fase, decisiones tomadas (p. ej. IIS/SSRS
-descartado en Fase 2) y pendientes abiertos para retomar: ver
-`docs/bitacora-despliegue.md`.
 
 ---
 
@@ -265,19 +260,17 @@ curl http://${MINIKUBE_IP}:30080/
 #    .\pfsense\scripts\aplicar-config-pfsense.ps1 -Script nat-port-forward
 ```
 
-⚠️ Seed de MongoDB: el workflow (Fase 6) lo ejecuta automáticamente
-en cada corrida (idempotente). Para hacerlo a mano después de un deploy
-manual o un reset de Mongo:
+El seed de MongoDB se ejecuta automáticamente en cada corrida del
+workflow (paso idempotente: no modifica datos si la colección ya tiene
+contenido). Para hacerlo manualmente:
 
 ```bash
-bash infra/scripts/seed-mongo.sh --backend-repo <ruta-checkout-backend>
+bash infra/scripts/seed-mongo.sh --backend-repo ./backend
 ```
 
-El script lee credenciales del Secret de Kubernetes, verifica si ya hay
-datos (y no toca nada si los hay), y carga los documentos de
-`scripts-dev/componentes_prueba.js` del repo del backend. Usar SIEMPRE
-ese archivo; NO el de `bases-de-datos` (`inventario_db.componentes`),
-que usa la base/colección incorrecta.
+El script lee credenciales del Secret de Kubernetes y carga los
+documentos de `backend/scripts-dev/componentes_prueba.js`
+(base `inventario_componentes`, colección `computadoras`).
 
 ✅ Checklist: los 3 Deployments en `Running` (1/1), `curl` al frontend
 responde `200`, login desde el navegador funciona, `/inventario/`
@@ -295,15 +288,14 @@ con el detalle de runner y secrets).
 
 1. Registrar un runner self-hosted (etiqueta `minikube`) en el host de
    Minikube: **Settings → Actions → Runners → New self-hosted runner**
-   en el repo de infraestructura.
+   en este repositorio.
 2. En esa misma máquina, crear `infra/red.local.env` (a partir de
-   `infra/red.example.env`, ver Fase 0) dentro del checkout del repo de
-   infraestructura. El workflow lo lee en el paso "Resolver
-   configuración de red" — no hace falta reemplazar ningún placeholder
-   a mano ni commitear nada.
-3. Cargar los GitHub Secrets: `REPO_ACCESS_TOKEN`, `JWT_SECRET`,
-   `SQLSERVER_USER`, `SQLSERVER_PASSWORD`, `MONGO_ROOT_USER`,
-   `MONGO_ROOT_PASSWORD`.
+   `infra/red.example.env`, ver Fase 0) dentro del checkout del repo.
+   El workflow lo lee en el paso "Resolver configuración de red" — no
+   hace falta reemplazar ningún placeholder a mano ni commitear nada.
+3. Cargar los GitHub Secrets en **Settings → Secrets and variables →
+   Actions**: `JWT_SECRET`, `SQLSERVER_USER`, `SQLSERVER_PASSWORD`,
+   `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD`, `LDAP_BIND_PASSWORD`.
 4. Ejecutar el workflow manualmente: **Actions → Deploy Inventario ITU
    a Minikube → Run workflow**.
 
@@ -316,34 +308,7 @@ VirtualBox (`pfsense/README.md` sección 2).
 
 ---
 
-## Fase 7 — Migración al repo principal
-
-📄 Ver `docs/migracion-repo-principal.md` para el paso a paso completo.
-
-El runner self-hosted está registrado en el fork personal
-`MartinZ18/Proyecto-Inventario-EGI-infraestructura`. Para que todo el
-equipo pueda disparar el workflow desde el repo compartido
-(`Agus-tina/Proyecto-Inventario-EGI`) hay que:
-
-1. Pushear el código de infra al repo principal (rama `seguridad` para el
-   trabajo de Martin, rama `despliegue` para el material de CI/CD).
-2. Dar de baja el runner del fork (`./config.sh remove`).
-3. Registrar el runner en el repo principal con un token nuevo.
-4. Cargar los 7 GitHub Secrets en el repo principal.
-5. Crear `infra/red.local.env` en el workspace nuevo del runner.
-6. Disparar el workflow desde el repo principal y verificar que termina
-   en verde.
-
-⚠️ El Secret `LDAP_BIND_PASSWORD` es nuevo — no estaba en el fork
-original; es necesario para el fix de LDAP del backend.
-
-✅ Checklist: workflow del repo principal termina en verde, `kubectl get
-pods -n inventario` muestra los 3 Deployments, login desde el frontend
-funciona.
-
----
-
-## Orden resumido para la defensa oral
+## Guía para la defensa oral
 
 1. Mostrar `docs/arquitectura.md` (diagrama general).
 2. Mostrar `kubectl get pods,svc,networkpolicy -n inventario`.

@@ -164,7 +164,7 @@ INSERT INTO Equipo (id_ubicacion, mesa, estado, fecha_alta) VALUES
   ( 7, 'B-07', 'OPERATIVO',     '2023-11-11'),  -- 9  desktop
   ( 9, 'C-13', 'OPERATIVO',     '2024-03-01'),  -- 10 laptop
   (11, 'C-11', 'OPERATIVO',     '2022-06-30'),  -- 11 desktop
-  (10, 'BAJA',          '2021-04-18');  -- 12 laptop
+  (10,  NULL,   'BAJA',          '2021-04-18');  -- 12 laptop
 GO
 
 -- ---------- Asignacion (13) ----------

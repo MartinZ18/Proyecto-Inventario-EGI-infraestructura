@@ -512,13 +512,11 @@ provienen del rango configurado en AD DS.
 - [x] WAN (NAT de VirtualBox) y LAN configuradas, NAT outbound automático.
 - [x] SSH habilitado (System > Advanced > Admin Access), acceso por
       clave pública desde la PC Windows funciona.
-- [ ] Port-forward `WAN:80 → ${MINIKUBE_IP}:30080` responde `200 OK`
-      (acceso externo oficial — diferido a Fase 5, cuando el frontend
-      esté desplegado en Minikube; ver sección 2 y "Port-forward a
-      nivel VirtualBox").
-- [ ] Port-forward a nivel VirtualBox `host:80 -> WAN:80` en
-      `pfSense-Gateway` aplicado y `curl http://127.0.0.1/` desde la PC
-      Windows responde `200 OK` (sección 2).
+- [x] Port-forward `WAN:80 → ${MINIKUBE_IP}:30080` configurado
+      (acceso externo al frontend vía NAT pfSense; ver sección 2 y
+      "Port-forward a nivel VirtualBox").
+- [x] Port-forward a nivel VirtualBox `host:80 -> WAN:80` en
+      `pfSense-Gateway` aplicado (sección 2).
 - [x] Authentication Server `AD-ITU-Laboratorio` configurado. pfSense 2.8
       no tiene botón *Test connection*; se verificó el bind LDAP por SSH
       (`ldapwhoami` como `pfsense_bind`) y con un login real exitoso.

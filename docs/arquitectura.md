@@ -29,10 +29,10 @@ compuesto por:
 - **CI/CD**: GitHub Actions (`workflow_dispatch`) con runner
   self-hosted en el host de Minikube.
 
-Este repositorio (`Proyecto-Inventario-EGI-infraestructura`) contiene
-todo lo necesario para desplegar y asegurar esos componentes: no
-contiene el código de la aplicación (que vive en las ramas
-`backend`/`frontend`/`bases-de-datos` del repo principal).
+Este repositorio contiene todo el código de la aplicación y la
+infraestructura necesaria para desplegar y operar el sistema:
+`backend/`, `frontend/`, `bases-de-datos/`, manifiestos de Kubernetes,
+scripts de Active Directory, pfSense e iptables.
 
 ---
 
@@ -101,12 +101,12 @@ flowchart TB
 
 ## Componentes y responsabilidades
 
-| Componente | Responsable (rol) | Repositorio/carpeta |
+| Componente | Responsable (rol) | Carpeta en el repo |
 |---|---|---|
-| Frontend (HTML/JS) | Integrante Frontend | rama `frontend` |
-| Backend (FastAPI) | Integrante Backend | rama `backend` |
-| Scripts SQL Server / MongoDB | Integrante Base de Datos | rama `bases-de-datos` |
-| Kubernetes, NetworkPolicies, pfSense, AD, firewall SQL Server, iptables, CI/CD | Martin (Seguridad y Redes) | este repo |
+| Frontend (HTML/JS) | Integrante Frontend | `frontend/` |
+| Backend (FastAPI) | Integrante Backend | `backend/` |
+| Scripts SQL Server / MongoDB | Integrante Bases de Datos | `bases-de-datos/` |
+| Kubernetes, NetworkPolicies, pfSense, AD, firewall SQL Server, iptables, CI/CD | Integrante Seguridad y Redes | `kubernetes/`, `active-directory/`, `pfsense/`, `sql-server-iis/`, `iptables/`, `.github/` |
 
 ---
 
