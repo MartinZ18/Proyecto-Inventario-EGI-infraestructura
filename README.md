@@ -172,3 +172,11 @@ con la etiqueta `minikube` instalado en LinuxEGI y los GitHub Secrets configurad
 | `jperez` | `Inventario!2025` | Docente (solo lectura) |
 | `agarcia` | `Inventario!2025` | Docente (solo lectura) |
 | `psanchez` | `Inventario!2025` | Alumno (solo lectura) |
+
+## Miembros del grupo
+- Luciana Torres - tluciana893@gmail.com |
+- Brian Tomadin - tomadinbrian@gmail.com |
+- Franco Prolongo - franklinelcrack3@gmail.com |
+- Roberto Vildoza - Roberto.e.vildoza.25@gmail.com |
+- Agustina Zartmann - zartmann.agustina@gmail.com |
+- Martin Zamora - martin.zamora004@gmail.com |
