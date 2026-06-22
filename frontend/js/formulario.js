@@ -1,5 +1,6 @@
-import { 
-    obtenerUbicaciones, crearEquipo, crearComponentes, obtenerInventario,
+import {
+    obtenerUbicaciones, obtenerPersonas, crearEquipo, crearComponentes,
+    crearAsignacion, obtenerInventario,
     obtenerEquipo, actualizarEquipo, actualizarComponentes,
     obtenerNombreVisible, obtenerRolUsu, logout, showMessage
 } from "./api.js";
@@ -20,6 +21,9 @@ const fModelo = document.getElementById("fModelo");
 const fObservacion = document.getElementById("fObservacion");
 const fEstado = document.getElementById("fEstado");
 const fFechaAlta = document.getElementById("fFechaAlta");
+
+// Responsable
+const selectResponsable = document.getElementById("fResponsable");
 
 // Subdocumentos
 const contenedorRam = document.getElementById("contenedorRam");
@@ -84,6 +88,27 @@ window.cambiarTipo = function(value){
     }
 }
 
+// Cargar técnicos en el select de responsable
+async function cargarPersonas(){
+    try{
+        const resp = await obtenerPersonas();
+        if(!resp.ok) return;
+        const datos = await resp.json();
+        const tecnicos = datos.filter(p => p.rol === 'TECNICO');
+        if(!selectResponsable) return;
+        selectResponsable.innerHTML = '';
+        const first = document.createElement('option');
+        first.value = ''; first.textContent = 'Seleccioná un responsable';
+        selectResponsable.appendChild(first);
+        tecnicos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id_persona;
+            opt.textContent = `${p.apellido}, ${p.nombre}`;
+            selectResponsable.appendChild(opt);
+        });
+    }catch(e){ console.error(e); }
+}
+
 // Cargar ubicaciones en el select
 async function cargarUbicaciones(){
     try{
@@ -127,6 +152,11 @@ async function cargarParaEditar(id){
         window._editingId = equipo.id_equipo;
         // Ubicacion
         if(selectUbicacion) selectUbicacion.value = equipo.ubicacion.id_ubicacion;
+        // Responsable: pre-seleccionar el técnico con asignación RESPONSABLE_TECNICO vigente
+        const asigActiva = equipo.asignaciones.find(
+            a => a.tipo_asignacion === 'RESPONSABLE_TECNICO' && !a.fecha_fin
+        );
+        if(asigActiva && selectResponsable) selectResponsable.value = asigActiva.persona.id_persona;
         // Mesa
         if(fMesa) fMesa.value = equipo.mesa ?? '';
         // Tipo y hardware
@@ -381,6 +411,17 @@ async function guardarFormulario(){
         if(respCrearComp.status === 403){ showMessage('No tiene permisos para crear componentes','danger'); return; }
         if(!respCrearComp.ok){ showMessage('Error creando componentes','danger'); return; }
 
+        // Asignar responsable técnico si se seleccionó uno
+        const responsableId = selectResponsable?.value;
+        if(responsableId){
+            await crearAsignacion({
+                id_equipo: nuevoId,
+                id_persona: parseInt(responsableId),
+                tipo_asignacion: 'RESPONSABLE_TECNICO',
+                fecha_inicio: fFechaAlta.value || new Date().toISOString().split('T')[0],
+            });
+        }
+
         // Ir al detalle del nuevo equipo
         window.location.href = 'detalle.html?id=' + nuevoId;
 
@@ -392,7 +433,7 @@ window.guardarFormulario = guardarFormulario;
 
 // Inicializar
 (async function init(){
-    await cargarUbicaciones();
+    await Promise.all([cargarUbicaciones(), cargarPersonas()]);
     const qid = getQueryId();
     if(qid){
         await cargarParaEditar(qid);

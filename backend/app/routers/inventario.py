@@ -13,7 +13,10 @@ from pymongo.database import Database
 from app.dependencies import get_sql, get_mongo, get_current_user, requiere_tecnico
 from app.repositories import computadora_repo
 from app.services import inventario_service
-from app.schemas.inventario import EquipoCreate, EquipoUpdate, EquipoOut, UbicacionOut, PersonaOut
+from app.schemas.inventario import (
+    EquipoCreate, EquipoUpdate, EquipoOut, UbicacionOut, PersonaOut,
+    AsignacionCreate, AsignacionOut,
+)
 from app.schemas.computadora import (
     ComputadoraCreate, ComputadoraUpdate, ComputadoraOut, InventarioCompleto,
 )
@@ -119,3 +122,13 @@ def eliminar_componentes(id_equipo: int,
     """Elimina los componentes de un equipo (solo técnicos)."""
     if not computadora_repo.delete(mongo, id_equipo):
         raise HTTPException(status_code=404, detail="Componentes no encontrados")
+
+
+# ===== ASIGNACIONES (escritura - solo técnicos) =====
+
+@router.post("/asignaciones", response_model=AsignacionOut, status_code=201)
+def crear_asignacion(data: AsignacionCreate,
+                     sql: Session = Depends(get_sql),
+                     _: dict = Depends(requiere_tecnico)):
+    """Asigna un responsable técnico a un equipo (solo técnicos)."""
+    return inventario_service.equipo_repo.create_asignacion(sql, data)

@@ -83,6 +83,13 @@ class EquipoUpdate(BaseModel):
     fecha_alta: Optional[date] = None
 
 
+class AsignacionCreate(BaseModel):
+    id_equipo: int
+    id_persona: int
+    tipo_asignacion: Optional[str] = 'RESPONSABLE_TECNICO'
+    fecha_inicio: Optional[date] = None
+
+
 class UbicacionCreate(BaseModel):
     """Datos para crear una ubicación (los 4 laboratorios se cargan una vez)."""
     id_ubicacion: int

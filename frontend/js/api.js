@@ -215,3 +215,11 @@ export async function actualizarComponentes(id, data){
 export async function obtenerPersonas() {
     return await fetchWithAuth('/inventario/personas', { method: 'GET' });
 }
+
+export async function crearAsignacion(data) {
+    return await fetchWithAuth('/inventario/asignaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+}

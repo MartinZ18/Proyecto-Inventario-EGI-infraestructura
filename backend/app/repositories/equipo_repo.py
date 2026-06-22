@@ -5,10 +5,12 @@ navegar a su ubicación, asignaciones y mantenimientos sin escribir JOINs a mano
 anticipada (joinedload) para traer todo en una sola consulta eficiente.
 """
 
+from datetime import date as date_type
 from typing import Optional, List
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from app.models.inventario import Equipo, Ubicacion, Persona
-from app.schemas.inventario import EquipoCreate, EquipoUpdate
+from app.models.inventario import Equipo, Ubicacion, Persona, Asignacion
+from app.schemas.inventario import EquipoCreate, EquipoUpdate, AsignacionCreate
 
 
 def _con_relaciones(query):
@@ -92,3 +94,22 @@ def delete(db: Session, id_equipo: int) -> bool:
 def existe(db: Session, id_equipo: int) -> bool:
     """Indica si un equipo existe (útil antes de cargar sus componentes)."""
     return db.query(Equipo.id_equipo).filter(Equipo.id_equipo == id_equipo).first() is not None
+
+
+def create_asignacion(db: Session, data: AsignacionCreate) -> Asignacion:
+    max_id = db.query(func.max(Asignacion.id_asignacion)).scalar() or 0
+    nueva = Asignacion(
+        id_asignacion=max_id + 1,
+        id_equipo=data.id_equipo,
+        id_persona=data.id_persona,
+        tipo_asignacion=data.tipo_asignacion or 'RESPONSABLE_TECNICO',
+        fecha_inicio=data.fecha_inicio or date_type.today(),
+    )
+    db.add(nueva)
+    db.commit()
+    return (
+        db.query(Asignacion)
+        .options(joinedload(Asignacion.persona))
+        .filter(Asignacion.id_asignacion == nueva.id_asignacion)
+        .first()
+    )
