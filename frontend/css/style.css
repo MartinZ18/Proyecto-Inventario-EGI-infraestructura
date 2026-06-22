@@ -1,14 +1,36 @@
-body, html { height: 100%; }
-    .panel-izquierdo { background-color: #007378; min-height: 100vh; }
-    .toggle-pw { cursor: pointer; }
+﻿body, html { height: 100%; }
+:root{
+    --brand: #0d6efd; /* primary */
+    --brand-600: #0b5ed7;
+    --muted: #6b7280;
+    --bg: #f4f6f9;
+    --card-bg: #ffffff;
+    --nav-bg: #0b1220;
+    --text: #0f1724;
+    --danger: #dc3545;
+    --space-xxs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --base-font: 16px;
+}
+
+.page-title{ margin-bottom: 1rem; color: var(--text); }
+
+html { font-size: var(--base-font); }
+body, html { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+.panel-izquierdo { background-color: #007378; min-height: 100vh; }
+.toggle-pw { cursor: pointer; }
 
 /* Navbar */
 nav {
-    background-color: #000;
+    background-color: var(--nav-bg);
 }
  
 .navbar-brand {
-    color: #d3d1ce !important;
+    color: #f8fafc !important;
 }
  
 #nomUsu {
@@ -22,8 +44,8 @@ nav {
 /* Botón filtro dropdown */
 .btn-filtro {
     background-color: #fff !important;
-    border: 1px solid #ccc !important;
-    color: #333 !important;
+    border: 1px solid #e6e9ef !important;
+    color: var(--text) !important;
     width: auto;
     text-align: left;
 }
@@ -40,7 +62,7 @@ nav {
  
 /* ── Botón Nueva Máquina ── */
 .btn-nueva-maq {
-    background-color: #000 !important;
+    background-color: var(--brand) !important;
     color: #fff !important;
     border: none;
     border-radius: 6px;
@@ -54,7 +76,7 @@ nav {
 /* ── Tabla ── */
 
 thead tr {
-    border-bottom: 1.5px solid #dee2e6;
+    border-bottom: 1.5px solid #e6e9ef;
 }
  
 tbody tr {
@@ -87,7 +109,7 @@ tbody tr:last-child {
  
 /* Botón Ver Detalle */
 .btn-ver-detalle {
-    background-color: #3b5bdb;
+    background-color: var(--brand-600);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -102,7 +124,7 @@ tbody tr:last-child {
  
 /* Botón Eliminar */
 .btn-eliminar {
-    background-color: #dc3545;
+    background-color: var(--danger);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -127,7 +149,7 @@ tbody tr:last-child {
 
 /* Boton Volver al Listado */
 .btn-volverListado{
-    background-color: #000 !important;
+    background-color: var(--brand) !important;
     color: #fff !important;
     border: none;
     border-radius: 6px;
@@ -135,7 +157,7 @@ tbody tr:last-child {
 
 /* Boton cancelar de Formulario */
 .btn-Cancelar{
-    background-color: #000 !important;
+    background-color: var(--brand) !important;
     color: #fff !important;
     border: none;
     border-radius: 6px;
@@ -145,3 +167,120 @@ tbody tr:last-child {
 .breadcrumb-item + .breadcrumb-item::before {
     color: white !important; /* lo coloco en color blanco */
 }
+
+/* Badges estandarizadas */
+.badge{ padding: 0.35rem 0.75rem; border-radius: 999px; font-weight:600; font-size:0.85rem; }
+.badge-laptop{ background: rgba(13,110,253,0.08); color: var(--brand-600); }
+.badge-desktop{ background: rgba(245,158,11,0.08); color: #b45309; }
+
+/* Breadcrumb más limpia */
+.breadcrumb{ background: transparent; padding: 0; margin-bottom: var(--space-md); }
+.breadcrumb .breadcrumb-item + .breadcrumb-item::before{ color: rgba(15,23,36,0.35) !important; }
+
+/* Empty state */
+#sinResultados{ display: flex; justify-content: center; }
+#sinResultados .empty-card{ max-width: 720px; background: linear-gradient(180deg,#fff,#fbfdff); border-radius: 12px; padding: var(--space-md); box-shadow: 0 8px 30px rgba(2,6,23,0.06); }
+
+/* Actions grouping */
+.actions{ display:flex; gap:0.5rem; align-items:center; }
+.actions .btn{ min-width:120px; }
+.actions-right{ display:flex; gap:0.5rem; justify-content:flex-end; }
+@media (max-width:768px){ .actions-right{ justify-content:flex-start; flex-wrap:wrap; } }
+
+/* Inputs: mejor contraste para placeholder */
+.form-control::placeholder{ color: #9aa3b2; }
+
+
+/* Cards: más claro y con sombra sutil para coherencia */
+.card.bg-secondary-dark{
+    background: var(--card-bg) !important;
+    color: var(--text) !important;
+    box-shadow: 0 6px 18px rgba(15,23,36,0.04);
+    padding: var(--space-md) !important;
+    border-radius: 10px !important;
+}
+
+/* Titulos de página */
+.page-title{ font-size: 1.5rem; line-height: 1.2; margin-bottom: var(--space-md); }
+
+/* Ajustes globales botones */
+.btn-primary{ background-color: var(--brand) !important; border-color: var(--brand) !important; }
+.btn-primary:hover{ background-color: var(--brand-600) !important; border-color: var(--brand-600) !important; }
+
+/* Botones: tamaño y radio coherente */
+.btn{ padding: 0.5rem 0.9rem; border-radius: 8px; }
+
+/* Tabla cabecera más suave */
+.table-dark thead{ background: linear-gradient(180deg,#273043,#121823); color:#fff; }
+
+/* Pequeños ajustes de accesibilidad */
+.breadcrumb a{ color: var(--brand-600) !important; text-decoration: none; }
+
+/* Formularios: inputs más altos y espacios coherentes */
+.form-label{ font-size: 0.9rem; color: var(--muted); }
+.form-control{ padding: 0.55rem 0.75rem; border-radius: 8px; }
+.form-select{ padding: 0.5rem 0.75rem; border-radius: 8px; }
+
+/* Tabla: mejorar densidad y legibilidad */
+.table th, .table td{ padding: 0.7rem 0.9rem; vertical-align: middle; }
+.table-hover tbody tr:hover{ background-color: rgba(13,110,253,0.03); }
+
+/* Navbar: altura y brand legible */
+nav.navbar{ padding-top: 0.6rem; padding-bottom: 0.6rem; }
+.navbar-brand{ font-size: 1.25rem; }
+
+/* Microespaciado para secciones */
+.section-gap{ margin-top: var(--space-lg); margin-bottom: var(--space-lg); }
+
+/* Contenedor principal centrado para mejor lectura en pantallas grandes */
+.container-fluid[role="main"]{ max-width: 1100px; margin-left: auto; margin-right: auto; }
+
+/* Focus visible consistente para accesibilidad */
+:focus-visible{ outline: 3px solid rgba(13,110,253,0.25); outline-offset: 2px; border-radius: 6px; }
+
+/* Mejor contraste modal */
+.modal-content{ background: var(--card-bg); color: var(--text); }
+
+/* Transiciones suaves */
+.btn, .form-control, .form-select, .dropdown-toggle{ transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+
+/* Tabla: menos bordes y mejor jerarquía */
+.table{ border-collapse: separate; border-spacing: 0; }
+.table thead th{ border-bottom-width: 2px; }
+
+/* Botones: tamaño y comportamiento */
+.btn:active, .btn:focus{ transform: translateY(0.5px); }
+
+/* Filtros: reglas responsive */
+.filters{ gap: var(--space-sm); }
+@media (max-width: 768px){
+    .filters{ flex-direction: column; align-items: stretch; }
+    .filters .dropdown, .filters .btn-filtro{ width: 100%; }
+    .filters h5{ display:none; }
+    .table-responsive{ overflow-x: auto; }
+}
+
+/* Navbar sticky y sombra ligera */
+nav.navbar{ position: sticky; top: 0; z-index: 1030; box-shadow: 0 2px 8px rgba(2,6,23,0.06); }
+
+/* Tabla: filas alternadas para mejorar legibilidad */
+.table tbody tr:nth-child(odd){ background: rgba(13,110,253,0.02); }
+
+/* Inputs: focus más claro y consistente */
+.form-control:focus, .form-select:focus{ border-color: var(--brand-600); box-shadow: 0 0 0 6px rgba(13,110,253,0.06); }
+
+/* Botón outline secundario: contraste y hover */
+.btn-outline-secondary{ color: var(--text); border-color: #d1d5db; background: transparent; }
+.btn-outline-secondary:hover{ background: #f1f5f9; border-color: var(--brand); }
+
+/* Responsividad tipográfica */
+@media (max-width: 768px){
+    html{ font-size: 15px; }
+    h1.page-title{ font-size: 1.25rem; }
+}
+
+
+/* Mejor contraste para breadcrumb */
+.breadcrumb-item a{ color: #fff !important; }
+
+

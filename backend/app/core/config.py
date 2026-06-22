@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuración central de la aplicación.
 Lee todas las variables de entorno una sola vez y las expone como un objeto 'settings' que el resto del código importa. Gracias a esto, el
 mismo código corre en local, Docker o Kubernetes: lo único que cambia son los valores del entorno (.env / ConfigMap / Secret), nunca el código.

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Schemas Pydantic del inventario (forma de los datos en la API).
 
 Definen cómo se exponen las entidades del modelo relacional hacia afuera.

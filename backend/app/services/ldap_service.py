@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio de autenticación contra LDAP / Active Directory.
 
 Encapsula la verificación de credenciales contra el servidor de identidad

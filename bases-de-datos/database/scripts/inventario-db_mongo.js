@@ -1,4 +1,4 @@
-// =====================================================================
+﻿// =====================================================================
 //  inventario-db  |  MongoDB (ejecutar con: mongosh < inventario-db_mongo.js)
 //  Componentes internos de cada equipo (parte NoSQL)
 //  Diagrama: NoSQL-EGI-4materias

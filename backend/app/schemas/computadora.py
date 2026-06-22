@@ -1,4 +1,4 @@
-"""
+﻿"""
 Schemas Pydantic de COMPONENTES (MongoDB).
 
 Reflejan el diseño documental de inventario-db: objetos anidados (CPU, SO, GPU),

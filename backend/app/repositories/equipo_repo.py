@@ -1,4 +1,4 @@
-"""
+﻿"""
 Repositorio de EQUIPOS (SQL Server).
 Concentra las consultas al modelo relacional. La clave acá es que, gracias a las relationships de SQLAlchemy, al traer un Equipo podemos
 navegar a su ubicación, asignaciones y mantenimientos sin escribir JOINs a mano: SQLAlchemy los resuelve por detrás. Usamos carga 

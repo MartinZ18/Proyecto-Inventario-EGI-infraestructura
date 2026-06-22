@@ -1,4 +1,4 @@
-"""
+﻿"""
 Servicio de INVENTARIO: el núcleo del sistema.
 
 Orquesta las dos bases de datos para construir la vista unificada de cada equipo:
