@@ -139,6 +139,32 @@ async function cargarParaEditar(id){
         fEstado.value = equipo.estado ?? '';
         fFechaAlta.value = equipo.fecha_alta ?? '';
 
+        // Sistema operativo
+        if(comp?.sistema_operativo){
+            const so = comp.sistema_operativo;
+            const soNombre = document.getElementById('fSoNombre'); if(soNombre) soNombre.value = so.nombre ?? '';
+            const soVersion = document.getElementById('fSoVersion'); if(soVersion) soVersion.value = so.version ?? '';
+            const soArq = document.getElementById('fSoArq'); if(soArq) soArq.value = so.arquitectura ?? '';
+        }
+        // CPU
+        if(comp?.cpu){
+            const cpu = comp.cpu;
+            const cpuFab = document.getElementById('fCpuFab'); if(cpuFab) cpuFab.value = cpu.fabricante ?? '';
+            const cpuMod = document.getElementById('fCpuMod'); if(cpuMod) cpuMod.value = cpu.modelo ?? '';
+            const cpuNuc = document.getElementById('fCpuNuc'); if(cpuNuc) cpuNuc.value = cpu.nucleos ?? '';
+            const cpuFrec = document.getElementById('fCpuFrec'); if(cpuFrec) cpuFrec.value = cpu.frecuencia_ghz ?? '';
+        }
+        // Periféricos (desktop)
+        if(comp?.perifericos){
+            const p = comp.perifericos;
+            if(p.monitor){ const f = document.getElementById('fMonFab'); if(f) f.value = p.monitor.fabricante ?? ''; const m = document.getElementById('fMonMod'); if(m) m.value = p.monitor.modelo ?? ''; const g = document.getElementById('fMonPulg'); if(g) g.value = p.monitor.pulgadas ?? ''; }
+            if(p.teclado){ const f = document.getElementById('fTecFab'); if(f) f.value = p.teclado.fabricante ?? ''; const c = document.getElementById('fTecCon'); if(c) c.value = p.teclado.conexion ?? ''; }
+            if(p.mouse){ const f = document.getElementById('fMouFab'); if(f) f.value = p.mouse.fabricante ?? ''; const c = document.getElementById('fMouCon'); if(c) c.value = p.mouse.conexion ?? ''; }
+        }
+        // Batería y pantalla (laptop)
+        if(comp?.bateria){ const e = document.getElementById('fBatEstado'); if(e) e.value = comp.bateria.estado ?? ''; const c = document.getElementById('fBatCiclos'); if(c) c.value = comp.bateria.ciclos ?? ''; }
+        if(comp?.pantalla_integrada){ const p = document.getElementById('fPantPulg'); if(p) p.value = comp.pantalla_integrada.pulgadas ?? ''; const r = document.getElementById('fPantRes'); if(r) r.value = comp.pantalla_integrada.resolucion ?? ''; }
+
         // RAM
         contenedorRam.innerHTML = '';
         if(comp?.ram){
@@ -256,9 +282,47 @@ async function guardarFormulario(){
             fabricante: fFabricante.value || undefined,
             modelo: fModelo.value || undefined,
             observacion: fObservacion.value || undefined,
+            sistema_operativo: {
+                nombre:       document.getElementById('fSoNombre')?.value || undefined,
+                version:      document.getElementById('fSoVersion')?.value || undefined,
+                arquitectura: document.getElementById('fSoArq')?.value || undefined,
+            },
+            cpu: {
+                fabricante:    document.getElementById('fCpuFab')?.value || undefined,
+                modelo:        document.getElementById('fCpuMod')?.value || undefined,
+                nucleos:       document.getElementById('fCpuNuc')?.value ? parseInt(document.getElementById('fCpuNuc').value) : undefined,
+                frecuencia_ghz: document.getElementById('fCpuFrec')?.value ? parseFloat(document.getElementById('fCpuFrec').value) : undefined,
+            },
             ram: leerRam(),
             almacenamiento: leerAlmacenamiento(),
         };
+
+        if(tipo === 'desktop'){
+            componentes.perifericos = {
+                monitor: {
+                    fabricante: document.getElementById('fMonFab')?.value || undefined,
+                    modelo:     document.getElementById('fMonMod')?.value || undefined,
+                    pulgadas:   document.getElementById('fMonPulg')?.value ? parseFloat(document.getElementById('fMonPulg').value) : undefined,
+                },
+                teclado: {
+                    fabricante: document.getElementById('fTecFab')?.value || undefined,
+                    conexion:   document.getElementById('fTecCon')?.value || undefined,
+                },
+                mouse: {
+                    fabricante: document.getElementById('fMouFab')?.value || undefined,
+                    conexion:   document.getElementById('fMouCon')?.value || undefined,
+                },
+            };
+        } else if(tipo === 'laptop'){
+            componentes.bateria = {
+                estado: document.getElementById('fBatEstado')?.value || undefined,
+                ciclos: document.getElementById('fBatCiclos')?.value ? parseInt(document.getElementById('fBatCiclos').value) : undefined,
+            };
+            componentes.pantalla_integrada = {
+                pulgadas:   document.getElementById('fPantPulg')?.value ? parseFloat(document.getElementById('fPantPulg').value) : undefined,
+                resolucion: document.getElementById('fPantRes')?.value || undefined,
+            };
+        }
 
         // Validar componentes antes de enviar
         const v = validarComponentes(componentes);
