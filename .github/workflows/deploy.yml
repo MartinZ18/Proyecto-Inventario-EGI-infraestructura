@@ -155,15 +155,16 @@ jobs:
       - name: Seed MongoDB (idempotente)
         run: bash infraestructura/infra/scripts/seed-mongo.sh --backend-repo=./infraestructura/backend
 
-      # 15) Resumen final: URL de acceso LAN (NodePort) y estado de los
-      #     pods, útil para la demo. El acceso externo (fuera de la red
-      #     del laboratorio) se resuelve aparte, vía el NAT port-forward
-      #     de pfSense + el port-forward VirtualBox en pfSense-Gateway
-      #     (ver pfsense/README.md sección 2), no requiere pasos del
-      #     workflow.
+      # 15) Resumen final: URLs de acceso y estado de los pods.
+      #     Acceso interno (LAN/Host-Only): http://${MINIKUBE_IP}:30080
+      #     Acceso externo: pfSense WAN en modo Bridged reenvía WAN:80
+      #     hacia ${MINIKUBE_IP}:30080 vía NAT port-forward. La IP WAN
+      #     de pfSense es asignada por DHCP de la red física del lab
+      #     (ver infra/secretos.local.md para la IP actual).
       - name: Estado del despliegue
         run: |
-          echo "Frontend (LAN) disponible en: http://${MINIKUBE_IP}:30080"
-          echo "Acceso externo: NAT port-forward de pfSense + port-forward VirtualBox (ver pfsense/README.md seccion 2)"
-
+          echo "Acceso interno (LAN):   http://${MINIKUBE_IP}:30080"
+          echo "Acceso externo (pfSense WAN Bridged → NAT :80 → ${MINIKUBE_IP}:30080)"
+          echo "Ver IP WAN actual en infra/secretos.local.md"
+          echo ""
           kubectl get pods -n inventario -o wide
