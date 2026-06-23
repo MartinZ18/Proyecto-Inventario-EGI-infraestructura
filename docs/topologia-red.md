@@ -2,25 +2,24 @@
 
 ## Diagrama general
 
-Topología recomendada: **todo en una PC** con VirtualBox, red Host-Only
+Topología implementada: **todo en una PC** con VirtualBox, red Host-Only
 `192.168.56.0/24` (`IP_RED_PROF`) entre pfSense/AD/SQL Server/Minikube.
-El acceso externo se resuelve con un NAT port-forward de pfSense
-(`WAN:80 -> ${MINIKUBE_IP}:30080`, `pfsense/scripts/nat-port-forward.php`)
-más un port-forward a nivel VirtualBox en la VM `pfSense-Gateway`
-(`host:80 -> WAN:80`), sin depender de ningún servicio externo. Ver
-`pfsense/README.md` (secciones "Topología VirtualBox recomendada" y 2)
-para el detalle de adaptadores de red y los port-forwards.
+El acceso externo se resuelve con pfSense en **modo Bridged** en la WAN:
+pfSense obtiene una IP real de la red física del laboratorio (172.22.74.56
+por DHCP) y aplica NAT port-forwards hacia los servicios internos. No se
+requiere ningún port-forward a nivel VirtualBox. Ver `pfsense/README.md`
+para el detalle de adaptadores y reglas NAT activas.
 
 ```
-                                   Internet / red externa
+                        Red física del laboratorio (wifi/LAN)
                        ┌───────────────┴────────────────┐
                        │                                 │
-              Host Windows :80                  Cliente (navegador, LAN)
-       (VBoxManage natpf1                                │
-        pfSense-Gateway host:80->WAN:80)                 │
+              Cliente externo                   Cliente (LAN, misma red)
+           (celular, otra PC)                            │
                        │                                 │
                        ▼                                 ▼
-              pfSense WAN :80 (NAT VBox)
+              pfSense WAN :80 / :3389 / etc.
+              (Bridged, IP real: 172.22.74.56)
                        │
                  ┌───────────┐
                  │  pfSense  │  NAT gateway + auth AD
@@ -88,9 +87,9 @@ directo desde `kubernetes/`.
 
 | Origen | Destino | Puerto/Protocolo | Por qué |
 |---|---|---|---|
-| Cliente externo (wifi/celular, fuera de la red Host-Only) | Host Windows `:80` | 80/TCP | Port-forward a nivel VirtualBox en `pfSense-Gateway` (`host:80 -> WAN:80`), ver `pfsense/README.md` sección 2 |
-| Host Windows (port-forward VirtualBox) | pfSense WAN `:80` | 80/TCP | El port-forward de VirtualBox entrega el tráfico al WAN de pfSense |
-| Cliente (navegador, LAN) | pfSense WAN `:80` | 80/TCP | Acceso directo al frontend vía port-forward de pfSense (ver `pfsense/README.md` sección 2) |
+| Cliente externo (wifi/celular, red del laboratorio) | pfSense WAN `172.22.74.56:80` | 80/TCP | WAN en modo Bridged — IP real de la red física. Sin port-forward VirtualBox. |
+| Cliente externo | pfSense WAN `172.22.74.56:3389` | 3389/TCP | RDP al AD (DC01-ITU) |
+| Cliente externo | pfSense WAN `172.22.74.56:40200` | 40200/TCP | RDP al SQL Server |
 | pfSense | `frontend-service` (`${MINIKUBE_IP}:30080`) | 80/TCP (NAT port-forward, `nat-port-forward.php`) | Reenvío al NodePort del frontend |
 | `frontend` (pod) | `backend-service` | 8000/TCP | Proxy `/api/` de nginx hacia FastAPI |
 | `backend` (pod) | `mongo-service` | 27017/TCP | Lectura/escritura de `inventario_componentes.computadoras` |

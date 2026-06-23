@@ -76,13 +76,11 @@ $UserOuDN   = "OU=User,$OuRaizDN"
 $GruposOuDN = "OU=Grupos,$OuRaizDN"
 
 # ----- 2. Grupos de seguridad -----
-# - pfAdmins:        login a la WebGUI de pfSense (ver pfsense/README.md)
-# - InventarioAdmins / InventarioUsers: grupos generales de administracion
-#   del proyecto (no usados directamente por el backend).
+# - pfAdmins:   login a la WebGUI de pfSense (ver pfsense/README.md)
 # - Tecnicos / Docentes / Alumnos: roles que lee
 #   app/services/ldap_service.py -> obtener_rol() para el RBAC del backend
 #   (requiere_tecnico, ver app/dependencies.py).
-$Grupos = @("pfAdmins", "InventarioAdmins", "InventarioUsers", "Tecnicos", "Docentes", "Alumnos")
+$Grupos = @("pfAdmins", "Tecnicos", "Docentes", "Alumnos")
 
 foreach ($g in $Grupos) {
     if (-not (Get-ADGroup -Filter "Name -eq '$g'" -ErrorAction SilentlyContinue)) {
@@ -94,21 +92,25 @@ foreach ($g in $Grupos) {
 }
 
 # ----- 3. Usuarios del proyecto -----
-# Solo se crean los 4 necesarios:
+# Se crean 6 usuarios:
 #   svc-inventario  cuenta de servicio para el bind LDAP del backend
 #   pfsense_bind    cuenta de bind para la autenticacion de pfSense
-#   mgomez          UNICO usuario con TODOS los permisos (grupo Tecnicos)
-#   jperez          UNICO usuario de SOLO LECTURA        (grupo Docentes)
+#   mgomez          Tecnico (acceso total en la app) + admin de pfSense
+#   cfunes          Tecnico (acceso total en la app)
+#   jperez          Docente (solo lectura en la app)
+#   rdiaz           Docente (solo lectura en la app)
 #
 # Las contraseñas se reciben por parametro (ver bloque param() arriba).
 # Deben cumplir la politica de complejidad de AD: mayuscula+minuscula+
 # numero+simbolo, 8+ caracteres.
 # Nota: AD rechaza passwords que contengan 3+ caracteres del sAMAccountName.
 $Usuarios = @(
-    @{ Sam = "svc-inventario"; Nombre = "Service Account Inventario"; Pass = $PassInventario; Grupos = @("InventarioAdmins") }
+    @{ Sam = "svc-inventario"; Nombre = "Service Account Inventario"; Pass = $PassInventario; Grupos = @() }
     @{ Sam = "pfsense_bind";   Nombre = "pfSense Bind Account";       Pass = $PassLdap;       Grupos = @() }
-    @{ Sam = "mgomez";         Nombre = "Maria Gomez";                Pass = $PassInventario; Grupos = @("Tecnicos", "InventarioAdmins", "InventarioUsers", "pfAdmins") }
-    @{ Sam = "jperez";         Nombre = "Juan Perez";                 Pass = $PassInventario; Grupos = @("Docentes", "InventarioUsers") }
+    @{ Sam = "mgomez";         Nombre = "Maria Gomez";                Pass = $PassInventario; Grupos = @("Tecnicos", "pfAdmins") }
+    @{ Sam = "cfunes";         Nombre = "Carlos Funes";               Pass = $PassInventario; Grupos = @("Tecnicos") }
+    @{ Sam = "jperez";         Nombre = "Juan Perez";                 Pass = $PassInventario; Grupos = @("Docentes") }
+    @{ Sam = "rdiaz";          Nombre = "Roberto Diaz";               Pass = $PassInventario; Grupos = @("Docentes") }
 )
 
 foreach ($u in $Usuarios) {
@@ -137,9 +139,11 @@ foreach ($u in $Usuarios) {
 }
 
 Write-Host ""
-Write-Host "Listo. Estructura OU=ITU, grupos y 4 usuarios creados/verificados:"
-Write-Host "  mgomez      -> Tecnicos (acceso total en la app)"
-Write-Host "  jperez      -> Docentes (solo lectura en la app)"
+Write-Host "Listo. Estructura OU=ITU, grupos y 6 usuarios creados/verificados:"
+Write-Host "  mgomez  -> Tecnicos, pfAdmins (acceso total + admin pfSense)"
+Write-Host "  cfunes  -> Tecnicos (acceso total en la app)"
+Write-Host "  jperez  -> Docentes (solo lectura en la app)"
+Write-Host "  rdiaz   -> Docentes (solo lectura en la app)"
 Write-Host "  svc-inventario -> bind LDAP del backend (ver README.md, seccion 4)"
 Write-Host "  pfsense_bind   -> bind de autenticacion de pfSense"
 Write-Host ""

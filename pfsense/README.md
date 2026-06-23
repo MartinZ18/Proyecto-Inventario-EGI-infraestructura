@@ -47,13 +47,12 @@ ajustalos en `infra/red.local.env` (gitignored) — ver
    - **LAN**: adaptador "Red solo-anfitrión" (Host-Only), IP estática
      `192.168.56.2/24`. Es la interfaz por la que pfSense habla con AD,
      SQL Server y Minikube.
-   - **WAN**: adaptador "NAT" (el NAT por defecto de VirtualBox). Le da
-     a pfSense salida a internet por su cuenta (actualizaciones,
-     sincronización horaria NTP) y es también la vía de acceso externo
-     al frontend: el NAT port-forward `WAN:80 -> ${MINIKUBE_IP}:30080`
-     (sección 2) más un port-forward a nivel VirtualBox
-     (`host:80 -> WAN:80`, también en sección 2) exponen el frontend
-     fuera de la red Host-Only — ver `docs/topologia-red.md`.
+   - **WAN**: adaptador **Bridged** (modo puente). pfSense obtiene una IP
+     real de la red física del laboratorio por DHCP (ej. `172.22.74.56`).
+     Los NAT port-forwards (`WAN:80 -> ${MINIKUBE_IP}:30080`, `WAN:3389 ->
+     ${DC_IP}:3389`, `WAN:40200 -> ${SQLSERVER_IP}:3389`) son accesibles
+     directamente desde cualquier dispositivo en la misma red física —
+     sin necesidad de port-forwards adicionales en VirtualBox.
 
 3. **VM del Domain Controller (DC01-ITU)**: adaptador Host-Only, IP
    estática `192.168.56.10/24`, gateway `192.168.56.2` (pfSense).

@@ -67,23 +67,20 @@ itu.local
 | Grupo | Propósito |
 |---|---|
 | `pfAdmins` | Login de administradores en la WebGUI de pfSense (ver `pfsense/README.md`) |
-| `InventarioAdmins` | Administradores generales del proyecto (técnicos + cuenta de servicio) |
-| `InventarioUsers` | Todos los usuarios habilitados a usar el sistema |
 | `Tecnicos` | Rol "Técnico" leído por `app/services/ldap_service.py::obtener_rol()` — habilita `requiere_tecnico` (alta/edición/baja de equipos) |
-| `Docentes` | Rol "Docente" |
+| `Docentes` | Rol "Docente" (solo lectura en la app) |
 | `Alumnos` | Rol "Alumno" |
 
 ### Usuarios de prueba (`OU=User,OU=ITU,DC=itu,DC=local`)
 
 | Usuario (sAMAccountName / UPN) | Contraseña | Grupos | Propósito |
 |---|---|---|---|
-| `svc-inventario@itu.local` | `Inventario!2025` | `InventarioAdmins` | Cuenta de servicio para el bind administrativo del backend (ver "Acción requerida en el backend" abajo) |
+| `svc-inventario@itu.local` | `Inventario!2025` | — | Cuenta de servicio para el bind administrativo del backend (ver "Acción requerida en el backend" abajo) |
 | `pfsense_bind@itu.local` | `LdapAuth!2025` | — | Bind LDAP de pfSense (`AD-ITU-Laboratorio`, ver `pfsense/README.md`). **Nota**: en el DC actual esta cuenta quedó en `OU=pfsense,DC=itu,DC=local` (OU propia bajo la raíz del dominio), no en `OU=User,OU=ITU,...` como el resto de la tabla — verificado con `ldapsearch` el 2026-06-14. El `ldap_binddn` del Authentication Server debe usar esa ruta. **Nota 2**: la password original `Pfsense!2025` nunca fue válida — viola la política de complejidad de AD por contener 7 caracteres consecutivos del `sAMAccountName` (`pfsense_bind`). Se reseteó a `LdapAuth!2025` el 2026-06-14 con `Set-ADAccountPassword -Reset`. |
-| `jperez@itu.local` | `Inventario!2025` | `Docentes`, `InventarioUsers` | Usuario de prueba — Docente |
-| `mgomez@itu.local` | `Inventario!2025` | `Tecnicos`, `InventarioAdmins`, `InventarioUsers`, `pfAdmins` | Usuario de prueba — Técnico, admin de pfSense |
-| `clopez@itu.local` | `Inventario!2025` | `Tecnicos`, `InventarioAdmins`, `InventarioUsers` | Usuario de prueba — Técnico |
-| `agarcia@itu.local` | `Inventario!2025` | `Docentes`, `InventarioUsers` | Usuario de prueba — Docente |
-| `psanchez@itu.local` | `Inventario!2025` | `Alumnos`, `InventarioUsers` | Usuario de prueba — Alumno |
+| `mgomez@itu.local` | `Inventario!2025` | `Tecnicos`, `pfAdmins` | Usuario de prueba — Técnico, admin de pfSense |
+| `cfunes@itu.local` | `Inventario!2025` | `Tecnicos` | Usuario de prueba — Técnico |
+| `jperez@itu.local` | `Inventario!2025` | `Docentes` | Usuario de prueba — Docente |
+| `rdiaz@itu.local` | `Inventario!2025` | `Docentes` | Usuario de prueba — Docente |
 
 ### Ejecutar el script
 
@@ -223,9 +220,8 @@ credenciales **y** devuelve el rol `Tecnicos`, habilitando
 
 - [ ] `Get-ADDomain` confirma el dominio `itu.local` activo.
 - [ ] OUs `OU=ITU` → `User/Computer/Server/Printer/Grupos` creadas.
-- [ ] 6 grupos de seguridad creados (`pfAdmins`, `InventarioAdmins`,
-      `InventarioUsers`, `Tecnicos`, `Docentes`, `Alumnos`).
-- [ ] 7 usuarios de prueba creados, con membresías correctas.
+- [ ] 4 grupos de seguridad creados (`pfAdmins`, `Tecnicos`, `Docentes`, `Alumnos`).
+- [ ] 6 usuarios creados con membresías correctas (svc-inventario, pfsense_bind, mgomez, cfunes, jperez, rdiaz).
 - [ ] Bind de prueba `mgomez@itu.local` / `Inventario!2025` exitoso
       (puede probarse con `ldapsearch` o `Test-LdapConnection` desde
       otra máquina apuntando a `192.168.56.10:389`, default `DC_IP`).

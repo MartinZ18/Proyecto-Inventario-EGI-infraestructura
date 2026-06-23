@@ -19,11 +19,10 @@ compuesto por:
   SSH desde `pfsense/scripts/`) e iptables (host de Minikube). Las IPs
   de la red del laboratorio se resuelven dinámicamente (`infra/`, ver
   `docs/topologia-red.md`).
-- **Acceso externo**: NAT port-forward de pfSense
-  (`WAN:80 -> ${MINIKUBE_IP}:30080`, `pfsense/scripts/nat-port-forward.php`)
-  más un port-forward a nivel VirtualBox en `pfSense-Gateway`
-  (`host:80 -> WAN:80`) exponen el frontend fuera de la red Host-Only;
-  el NodePort `:30080` sigue disponible directo para la LAN.
+- **Acceso externo**: pfSense WAN en modo **Bridged** obtiene IP real de
+  la red del laboratorio (172.22.74.56). NAT port-forwards exponen el
+  frontend (`WAN:80 -> ${MINIKUBE_IP}:30080`), RDP al AD (`WAN:3389`)
+  y RDP al SQL Server (`WAN:40200`). No se requiere port-forward VirtualBox.
 - **Orquestación**: Kubernetes (Minikube + Calico CNI), namespace
   `inventario`, con NetworkPolicies zero-trust.
 - **CI/CD**: GitHub Actions (`workflow_dispatch`) con runner
@@ -40,17 +39,13 @@ scripts de Active Directory, pfSense e iptables.
 
 ```mermaid
 flowchart TB
-    subgraph INET["Internet / red externa"]
-        Cliente["Cliente externo\n(wifi/celular)"]
-        ClienteLAN["Cliente (navegador, LAN)"]
+    subgraph INET["Red física del laboratorio"]
+        Cliente["Cliente externo\n(wifi/celular/otra PC)"]
+        ClienteLAN["Cliente (LAN, misma red)"]
     end
 
-    subgraph VBOX["Host Windows + VirtualBox"]
-        VBOXNAT["pfSense-Gateway: host:80 -> WAN:80\n(VBoxManage natpf1)"]
-    end
-
-    subgraph PFS["pfSense (NAT gateway)"]
-        WAN["WAN :80 (NAT VirtualBox)"]
+    subgraph PFS["pfSense (NAT gateway — WAN Bridged)"]
+        WAN["WAN 172.22.74.56\n:80 / :3389 / :40200"]
         LAN["LAN ${PFSENSE_LAN_IP}\n= ${IP_RED_PROF}"]
     end
 
@@ -78,8 +73,7 @@ flowchart TB
         GH["Workflow deploy.yml\n(runner self-hosted en MK)"]
     end
 
-    Cliente -->|"HTTP :80"| VBOXNAT
-    VBOXNAT -->|"port-forward VirtualBox"| WAN
+    Cliente -->|"HTTP :80 / RDP :3389"| WAN
     ClienteLAN -->|"HTTP :80"| WAN
     WAN -->|"NAT port-forward 80 -> 30080"| FE
     LAN --- DC
@@ -160,16 +154,11 @@ Resumen de las 3 capas:
    nodo (SSH, ICMP, NodePort), sin interferir con las cadenas que
    gestiona Calico.
 
-**Acceso externo (NAT port-forward)**: pfSense reenvía `WAN:80` hacia
-`${MINIKUBE_IP}:30080` (`pfsense/scripts/nat-port-forward.php`, requiere
-`wan-allow-private.php` aplicado primero — ver `pfsense/README.md`
-sección 1). Para que ese `WAN:80` sea alcanzable desde fuera de la red
-Host-Only, se agrega un port-forward a nivel VirtualBox en la VM
-`pfSense-Gateway` (`host:80 -> WAN:80`, mismo patrón que los de RDP/IIS
-en `pfsense/README.md` secciones 2.1/2.2). El tráfico entrante hacia
-`frontend` sigue gobernado por `02-allow-frontend-ingress` (acepta
-cualquier origen en :80): el modelo zero-trust dentro del clúster no
-cambia, solo cambia la vía de entrada externa.
+**Acceso externo**: pfSense WAN en modo Bridged tiene IP real de la red
+física (`172.22.74.56`). NAT port-forwards activos: `WAN:80 → ${MINIKUBE_IP}:30080`
+(app web), `WAN:3389 → ${DC_IP}:3389` (RDP al AD), `WAN:40200 → ${SQLSERVER_IP}:3389`
+(RDP al SQL). El tráfico al frontend sigue gobernado por `02-allow-frontend-ingress`;
+el modelo zero-trust dentro del clúster no cambia.
 
 Además: credenciales nunca en el repo (Secrets de Kubernetes +
 GitHub Secrets), JWT con expiración corta (60 min), RBAC por rol de
